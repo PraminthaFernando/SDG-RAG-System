@@ -1,0 +1,6 @@
+import os
+
+LLM_MODEL_NAME = os.getenv("GROQ_MODEL_NAME", "openai/gpt-oss-20b")
+LLM_TEMPERATURE = 0.0
+LLM_MAX_TOKENS = 2048
+LLM_TIMEOUT = 60

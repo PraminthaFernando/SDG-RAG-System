@@ -1,0 +1,1 @@
+EMBED_REMORT_API_ENDPOINT = "https://inadvertently-measureless-ester.ngrok-free.dev"
