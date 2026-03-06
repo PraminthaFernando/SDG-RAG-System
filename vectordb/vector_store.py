@@ -1,7 +1,6 @@
 from typing import List
 from pymilvus import Collection
 from .collection_manager import CollectionManager
-from .config import COLLECTION_NAME
 import threading
 
 _store_lock = threading.Lock()
@@ -14,8 +13,8 @@ class VectorStore:
         self.collection_manager = CollectionManager()
         self.collection = None
 
-    def initialize(self, reset=False):
-        self.collection = self.collection_manager.create_collection(reset=reset)
+    def initialize(self, reset=False, collection : str = "e5"):
+        self.collection = self.collection_manager.create_collection(reset=reset, collection=collection)
 
     def insert_documents(self, documents: List[dict]):
 
@@ -24,7 +23,7 @@ class VectorStore:
         [
             {
                 "id": str,
-                "pid": int,
+                "pid": str,
                 "document": str,
                 "page_number": int,
                 "chunk_number": int,

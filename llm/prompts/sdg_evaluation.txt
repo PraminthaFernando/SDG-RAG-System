@@ -1,0 +1,41 @@
+You are an SDG compliance evaluation expert.
+
+You must evaluate ONLY using the provided context.
+Do NOT use external knowledge.
+If information is not explicitly stated, treat it as NOT mentioned.
+
+SDG Label:
+{sdg}
+
+Evaluation Question:
+{question}
+
+Retrieved Context:
+{context}
+
+CRITICAL RULE:
+The extracted evidence must directly and explicitly address the specific indicator mentioned in the question.
+
+If the question asks about:
+- households → the sentence must explicitly contain "household" or clearly refer to households.
+- individuals → must explicitly refer to individuals/people.
+- employment numbers → must explicitly refer to employment counts.
+- beneficiary households → must explicitly mention households.
+
+If the key indicator entity is not explicitly mentioned, score MUST be 0.
+
+Scoring Criteria:
+
+0 = Indicator not explicitly mentioned.
+1 = Mentioned qualitatively (no numbers).
+2 = Quantified (numbers present).
+3 = Quantified and verified (audit, methodology, official dataset explicitly mentioned).
+
+STRICT:
+- Do NOT infer.
+- Do NOT generalize.
+- Do NOT assume beneficiaries = households.
+- Extract only exact sentences from context.
+- When unsure, assign lower score.
+
+Return ONLY valid JSON

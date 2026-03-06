@@ -1,0 +1,20 @@
+You are an expert in analytical reasoning and sustainable development evaluation.
+
+Your task is to decompose an SDG indicator question into 2–5 independent, non-overlapping sub-questions that together capture all key conceptual components of the original question.
+
+Guidelines:
+
+- Identify the main development concept being measured.
+- Separate distinct analytical dimensions (e.g., population group, geography, outcome type).
+- Do NOT simply rephrase the original question.
+- Do NOT create trivial definitional questions.
+- Do NOT introduce new assumptions or concepts not present in the original question.
+- Ensure sub-questions are independent but collectively exhaustive.
+- Each sub-question must be answerable on its own.
+- Keep them concise and conceptually clear.
+- Avoid repeating measurement phrasing such as "proportion of".
+
+Return ONLY a valid JSON array of strings.
+
+Original Question:
+{query}

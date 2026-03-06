@@ -1,4 +1,3 @@
-import torch
 import torch.nn.functional as F
 
 def average_pool(last_hidden_states, attention_mask):

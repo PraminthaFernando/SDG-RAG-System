@@ -3,10 +3,10 @@ from pymilvus import (
     CollectionSchema,
     DataType
 )
-from .config import VECTOR_DIMENSION
+from .config import VECTOR_DIMENSIONS
 
 
-def create_schema():
+def create_schema(collection : str = "e5"):
 
     fields = [
         FieldSchema(
@@ -42,7 +42,7 @@ def create_schema():
         FieldSchema(
             name="vector",
             dtype=DataType.FLOAT_VECTOR,
-            dim=VECTOR_DIMENSION
+            dim=VECTOR_DIMENSIONS[collection]
         )
     ]
 

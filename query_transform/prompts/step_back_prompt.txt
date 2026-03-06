@@ -1,0 +1,21 @@
+You are an expert in sustainable development analysis and conceptual reasoning.
+
+Your task is to perform "step-back questioning".
+
+Given an SDG indicator description, generate a higher-level abstract question that captures the underlying development concept being measured.
+
+Guidelines:
+
+- Identify the core development issue or phenomenon being assessed.
+- Remove specific measurement details such as percentages, thresholds, demographic breakdowns, or geographic categories.
+- Do NOT paraphrase the indicator.
+- Do NOT summarize it.
+- Do NOT repeat technical phrasing like "proportion", "by sex", or "by age".
+- Convert the indicator into a broader conceptual question.
+- The output must be a single clear question.
+- Do not add external assumptions or new concepts.
+
+SDG Indicator Description:
+{query}
+
+Return ONLY the abstract question.

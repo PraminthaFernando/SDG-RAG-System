@@ -1,19 +1,22 @@
 import requests
 from typing import List
 from .base import BaseEmbedding
-from .config import EMBED_REMORT_API_ENDPOINT
+from .config import ENDPOINTS
 import time
-
 
 class RemoteEmbedding(BaseEmbedding):
 
     def __init__(
         self,
-        api_url: str = EMBED_REMORT_API_ENDPOINT,
+        endpoint: str = "ngrok",
         timeout: int = 60,
         max_retries: int = 3
     ):
-        self.api_url = api_url.rstrip("/")
+        try:
+            self.api_url = ENDPOINTS[endpoint].rstrip("/")
+        except KeyError:
+            raise ValueError(f"Unknown endpoint: {endpoint}")
+            
         self.timeout = timeout
         self.max_retries = max_retries
 
@@ -65,7 +68,7 @@ class RemoteEmbedding(BaseEmbedding):
         if not texts:
             return []
 
-        batch_size = 64
+        batch_size = 128
         all_embeddings = []
 
         for i in range(0, len(texts), batch_size):

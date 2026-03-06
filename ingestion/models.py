@@ -7,7 +7,6 @@ class PageContent:
     page: int
     text: str
 
-
 @dataclass
 class IngestedDocument:
     pid: str

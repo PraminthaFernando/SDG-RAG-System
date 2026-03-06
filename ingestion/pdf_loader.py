@@ -1,8 +1,6 @@
-from pdfminer.high_level import extract_text
 import fitz
 from pathlib import Path
 from .models import PageContent, IngestedDocument
-
 
 class PDFLoader:
 

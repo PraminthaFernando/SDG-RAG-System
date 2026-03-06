@@ -13,7 +13,7 @@ class Retriever:
 
         expr = None
         if pid is not None:
-            expr = f"pid == {str(pid)}"
+            expr = f'pid == "{pid}"'
 
         results = self.collection.search(
             data=[query_vector],

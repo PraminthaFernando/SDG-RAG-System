@@ -65,11 +65,31 @@ def process_project(path : Path, proj : str, workers : int, logger : Logger, sto
             
     logger.info(f"Total chunks prepared for store: {len(all_docs)}")
 
+    BATCH_SIZE = 5000
+
     if not all_docs:
         logger.warning("No documents prepared. Exiting.")
         return []
-    
-    store.insert_documents(all_docs)
+
+    total_docs = len(all_docs)
+    logger.info(f"Preparing to insert {total_docs} documents")
+
+    if total_docs > BATCH_SIZE:
+        logger.info(f"Batch inserting documents (batch_size={BATCH_SIZE})")
+
+        for start in range(0, total_docs, BATCH_SIZE):
+            batch = all_docs[start:start + BATCH_SIZE]
+
+            logger.info(
+                f"Inserting batch {start // BATCH_SIZE + 1} "
+                f"({start} - {start + len(batch)})"
+            )
+
+            store.insert_documents(batch)
+
+    else:
+        logger.info("Inserting documents in a single batch")
+        store.insert_documents(all_docs)
           
     return all_docs
     
@@ -93,13 +113,10 @@ def main():
 
     logger.info(f"Starting batch ingestion from: {args.path}")
 
-    # pipeline = IngestionPipeline(pdf_base_path=args.path)
-    embedding_model = EmbeddingFactory.create("remort", api_url="https://inadvertently-measureless-ester.ngrok-free.dev")
+    embedding_model = EmbeddingFactory.create(model_type="remort", endpoint="cloudflared")
     vector_store = VectorStore(embedding_model)
-    vector_store.initialize(args.reset)
+    vector_store.initialize(args.reset, collection="nomic")
 
-    # all_projects = []
-    
     projects = [
         proj for proj in os.listdir(args.path)
     ]
@@ -114,33 +131,16 @@ def main():
     with ThreadPoolExecutor(max_workers=args.workers) as executor:
         futures = [
             executor.submit(process_project, Path(args.path), proj, args.workers, logger, vector_store)
-            for proj in projects[:40]
+            for proj in projects[31:]
         ]
 
         for future in as_completed(futures):
             result = future.result()
-            # all_projects.extend(result)
-            # vector_store.insert_documents(result)
             insert_count += 1
             logger.info(f"Number of rojects stored: {insert_count}")
             
 
     logger.info(f"Total projects stored: {insert_count}")
-
-    # if not all_projects:
-    #     logger.warning("No projects prepared. Exiting.")
-    #     return
-
-    # -----------------------------------
-    # Embedding + Insert (single-threaded)
-    # -----------------------------------
-    # logger.info("Starting embedding + vector insertion")
-
-    # vector_store.insert_documents(all_projects)
-
-    # logger.info("Batch ingestion complete.")
-    # logger.info(f"Total chunks inserted: {len(all_projects)}")
-
 
 if __name__ == "__main__":
     main()

@@ -4,13 +4,12 @@ from vectordb.collection_manager import CollectionManager
 from embeddings.embedding_factory import EmbeddingFactory
 from .base_retriever import BaseRetriever
 
-
 class DenseRetriever(BaseRetriever):
 
-    def __init__(self):
-        self.embedding_model = EmbeddingFactory.create("e5")
+    def __init__(self, collection : str = "e5"):
+        self.embedding_model = EmbeddingFactory.create(collection)
         manager = CollectionManager()
-        self.collection = manager.get_collection()
+        self.collection = manager.get_collection(collection)
         self.retriever = MilvusRetriever(self.collection, self.embedding_model)
 
     def retrieve(self, query: str, pid: int = None, top_k: int = 5) -> List[dict]:

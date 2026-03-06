@@ -1,9 +1,6 @@
-# ingestion/cleaner.py
-
 import re
 import spacy
 from typing import List
-
 
 class TextCleaner:
 
@@ -18,15 +15,15 @@ class TextCleaner:
         cleaned = ""
 
         for s in sentences:
-            s = re.sub(r"\s+", " ", s)
+            # s = re.sub(r"\s+", " ", s)
 
-            # Remove numeric-only lines
-            if re.fullmatch(r"[\d\W]+", s):
-                continue
+            # # Remove numeric-only lines
+            # if re.fullmatch(r"[\d\W]+", s):
+            #     continue
 
-            # Remove short fragments
-            if len(s) < 20:
-                continue
+            # # Remove short fragments
+            # if len(s) < 20:
+            #     continue
 
             cleaned += s + "\n"
 

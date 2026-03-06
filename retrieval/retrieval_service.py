@@ -8,13 +8,14 @@ class RetrievalService:
     def __init__(
         self,
         mode: str = "dense",
-        use_reranker: bool = False
+        use_reranker: bool = False,
+        collection : str = "e5"
     ):
 
         if mode == "dense":
-            self.retriever = DenseRetriever()
+            self.retriever = DenseRetriever(collection)
         elif mode == "hybrid":
-            self.retriever = HybridRetriever()
+            self.retriever = HybridRetriever(collection=collection)
         else:
             raise ValueError("Invalid retrieval mode")
 
@@ -24,7 +25,7 @@ class RetrievalService:
     def search(
         self,
         query: str,
-        pid: int = None,
+        pid: str = None,
         top_k: int = 5
     ) -> List[dict]:
 

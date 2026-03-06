@@ -1,11 +1,9 @@
 from pathlib import Path
-from typing import List
 from .pdf_loader import PDFLoader
 from .table_extractor import TableExtractor
 from .cleaner import TextCleaner
 from .chunker import TextChunker
 from .models import IngestedDocument
-
 
 class IngestionPipeline:
 
@@ -20,7 +18,7 @@ class IngestionPipeline:
 
         pdf_path = str(Path(self.loader.base_path) / filename)
 
-        all_chunks = []
+        new_pages = []
 
         for page in document.pages:
             sentences = self.cleaner.split_sentences(page.text)
@@ -28,14 +26,15 @@ class IngestionPipeline:
             table_texts = self.table_extractor.extract(pdf_path, page.page)
             chunks = self.chunker.chunk(sentences)
             chunks.extend(table_texts)
-            all_chunks.extend(chunks)
+            
+            for chunk in chunks:
+                new_pages.append(
+                    type(page)(
+                        page=page.page,
+                        text=chunk
+                    )
+                )
 
-        document.pages = [
-            type(document.pages[0])(
-                page=i + 1,
-                text=chunk
-            )
-            for i, chunk in enumerate(all_chunks)
-        ]
+        document.pages = new_pages
 
         return document

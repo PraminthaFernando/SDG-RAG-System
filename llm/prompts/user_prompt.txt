@@ -1,0 +1,8 @@
+SDG goal: {sdg_key} : {sdg_goal}
+
+SDG target : {target} : {sdg_target}
+
+Target code: {indicator} : {sdg_indicator}
+
+Evidences:
+{combined_text}
