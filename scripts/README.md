@@ -102,8 +102,6 @@ Expected filename format:
 ### Optional Parameters
 
 - batch_size : Embedding batch size (default=32)
-- reset : Remove and reset vector DB collection
-- workers : Number of worker thread for processing
 
 Usage
 
@@ -111,8 +109,7 @@ Usage
 python scripts/batch_ingest_folder.py \
     --path data/pdfs \
     --batch_size 32 \
-    --reset False \
-    --workers 2
+    --reset False
 ```
 
 ### What It Does
@@ -186,47 +183,3 @@ Returns:
 - PID
 - Page number
 - Content preview
-
----
-
-## batch_ingest_projects.py
-
-Batch ingests all PDF files inside a given folder.
-
-Expected filename format:
-
-```bash
- <project_document>.pdf
-```
-
-### Required Parameters
-
-- path : Folder containing Projects
-
-### Optional Parameters
-
-- batch_size : Embedding batch size (default=32)
-- reset : Remove and reset vector DB collection (default=False)
-- workers : Number of worker thread for processing (default=4)
-
-Usage
-
-```bash
-python scripts/batch_ingest_folder.py \
-    --path data/pdfs \
-    --batch_size 32 \
-    --reset False \
-    --workers 2
-```
-
-### What It Does
-
-For each PDF:
-
-- Extracts PID from foldername
-- Runs ingestion pipeline
-- Generates embeddings
-- Inserts into Milvus
-- Continues on failure (safe batch execution)
-
----

@@ -192,4 +192,5 @@ SDG_PROTOTYPES = {
             "Joint implementation agreements established."
         ]
     }
+
 }

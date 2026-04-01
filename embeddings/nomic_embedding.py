@@ -1,12 +1,15 @@
 from sentence_transformers import SentenceTransformer
 from .base import BaseEmbedding
 import warnings
+import torch
 
 warnings.filterwarnings("ignore", category=Warning)
 
 class nomicEmbedding(BaseEmbedding):
     def __init__(self):
-        self.model = SentenceTransformer("nomic-ai/nomic-embed-text-v1.5", trust_remote_code=True)
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        print(f"Run Nomic Embedding Model using: {self.device}")
+        self.model = SentenceTransformer("nomic-ai/nomic-embed-text-v1.5", trust_remote_code=True, device=str(self.device))
         
     def embed_documents(self, texts):
         prefixed_texts = ["search_document: " + t for t in texts]

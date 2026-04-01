@@ -9,8 +9,11 @@ class RecursiveDecomposer(BaseQueryTransformer):
             "query_transform/prompts/decomposition_prompt.txt"
         ).read_text()
 
-    def transform(self, query: str) -> list[str]:
-        prompt = self.prompt_template.format(query=query)
+    def transform(self, query: str, description : str) -> list[str]:
+        prompt = self.prompt_template.format(
+            query=query,
+            description=description
+        )
         response = self.llm.generate(prompt)
         try:
             subqueries = json.loads(response)

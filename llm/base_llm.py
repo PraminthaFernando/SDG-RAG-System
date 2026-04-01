@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from pydantic import BaseModel
-from typing import Any
+from typing import Type, Any
 
 class BaseLLM(ABC):
 

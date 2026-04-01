@@ -7,6 +7,9 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_groq import ChatGroq
 
 from .base_llm import BaseLLM
+from .config import LLM_MODEL_NAME
+from dotenv import load_dotenv
+load_dotenv()
 
 class GroqLLMClient(BaseLLM):
     def __init__(self, temperature: float = 0.0):

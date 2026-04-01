@@ -2,6 +2,7 @@ from pathlib import Path
 from langchain_core.prompts import PromptTemplate
 
 class SDGPromptBuilder:
+
     def __init__(self):
         self.template = Path("llm/prompts/sdg_evaluation.txt").read_text()
 

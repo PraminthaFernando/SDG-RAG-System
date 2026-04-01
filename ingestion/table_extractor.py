@@ -30,6 +30,30 @@ class TableExtractor:
 
         return semantic_rows
     
+    def get_table_boxes(self, pdf_path: str):
+        page_boxes = {}
+        try:
+            with _camelot_lock:
+                tables = camelot.read_pdf(pdf_path, pages="all", flavor="lattice")
+
+                if len(tables) == 0:
+                    tables = camelot.read_pdf(pdf_path, pages="all", flavor="stream")
+
+            for table in tables:
+
+                page = table.page
+                bbox = table._bbox
+
+                if page not in page_boxes:
+                    page_boxes[page] = []
+
+                page_boxes[page].append(bbox)
+
+        except Exception:
+            pass
+
+        return page_boxes
+    
     def get_tables_text(self, pdf_path : str, page_number : int) -> List[str]:
         table_sentences = []
         try:

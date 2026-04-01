@@ -1,18 +1,41 @@
-You are an expert in analytical reasoning and sustainable development evaluation.
+You are an expert in sustainable development measurement and SDG indicator analysis.
 
-Your task is to decompose an SDG indicator question into 2–5 independent, non-overlapping sub-questions that together capture all key conceptual components of the original question.
+Your task is to decompose an SDG indicator description into 2–5 independent analytical sub-questions that help identify empirical evidence in project reports or monitoring documents.
 
-Guidelines:
+The goal of decomposition is to retrieve measurable evidence that supports evaluation of the SDG indicator.
 
-- Identify the main development concept being measured.
-- Separate distinct analytical dimensions (e.g., population group, geography, outcome type).
-- Do NOT simply rephrase the original question.
-- Do NOT create trivial definitional questions.
-- Do NOT introduce new assumptions or concepts not present in the original question.
-- Ensure sub-questions are independent but collectively exhaustive.
-- Each sub-question must be answerable on its own.
-- Keep them concise and conceptually clear.
-- Avoid repeating measurement phrasing such as "proportion of".
+Additional SDG context:
+{description}
+
+Instructions:
+
+1. Identify the key measurement components of the indicator, such as:
+   - population group
+   - outcome or variable being measured
+   - geographic scope
+   - demographic disaggregation
+   - monitoring metric or statistic
+
+2. Convert these components into independent analytical questions that could be answered using evidence from reports, surveys, monitoring systems, or project documentation.
+
+3. Sub-questions must focus on retrieving observable or measurable evidence such as:
+   - statistics
+   - monitoring indicators
+   - survey results
+   - reported outcomes
+   - quantified impacts
+
+4. Do NOT generate theoretical or definitional questions about the concept itself.
+
+5. Do NOT introduce new concepts not present in the indicator.
+
+6. Avoid simply paraphrasing the original question.
+
+7. Sub-questions should collectively cover the key measurement dimensions of the indicator.
+
+8. Each question must be answerable independently using document evidence.
+
+Output requirements:
 
 Return ONLY a valid JSON array of strings.
 

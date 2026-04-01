@@ -17,13 +17,14 @@ Strict Evaluation Instructions:
 - Do NOT introduce new interpretations, assumptions, or external knowledge.
 - Do NOT re-retrieve or infer missing data.
 - If evidence is weak, indirect, or incomplete, treat it conservatively.
-- If evidence is irrelevant to the indicator’s measurement requirement, assign Score = 0.
+- If the evidence does not directly measure the indicator variable, assign Score = 0 even if the topic appears related.
 - If evidence is relevant but qualitative only, assign Score = 1.
 - Assign Score = 2 ONLY if the evidence contains explicit quantitative data that directly measures or clearly supports the indicator.
 
 Indicator–Evidence Alignment Rule:
 
 - Explicitly explain whether the evidence satisfies the indicator’s measurement requirement.
+- Only explain evidence directly related to the indicator variable. Ignore unrelated contextual details.
 - If numbers are mentioned but do not measure the indicator variable directly, treat as qualitative (Score = 1).
 - Do not over-score based on loosely related statistics.
 
@@ -39,9 +40,3 @@ JSON Format:
   "summary": "2–4 concise sentences. Clearly reference document name, page number, and specific qualitative or quantitative data. Explicitly state why the evidence satisfies or fails the measurement requirement.",
   "score": 0
 }}
-
-Scoring Definitions:
-
-Score = 2 → Relevant and explicitly quantified evidence directly measuring the indicator.
-Score = 1 → Relevant but qualitative or indirectly quantified evidence.
-Score = 0 → No relevant supporting evidence.

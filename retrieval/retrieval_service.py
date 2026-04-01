@@ -9,13 +9,14 @@ class RetrievalService:
         self,
         mode: str = "dense",
         use_reranker: bool = False,
+        model : str = "e5",
         collection : str = "e5"
     ):
 
         if mode == "dense":
-            self.retriever = DenseRetriever(collection)
+            self.retriever = DenseRetriever(model=model, collection=collection)
         elif mode == "hybrid":
-            self.retriever = HybridRetriever(collection=collection)
+            self.retriever = HybridRetriever(model=model, collection=collection)
         else:
             raise ValueError("Invalid retrieval mode")
 

@@ -13,10 +13,10 @@ class VectorStore:
         self.collection_manager = CollectionManager()
         self.collection = None
 
-    def initialize(self, reset=False, collection : str = "e5"):
-        self.collection = self.collection_manager.create_collection(reset=reset, collection=collection)
+    def initialize(self, reset=False, model : str = "e5", collection : str = "e5"):
+        self.collection = self.collection_manager.create_collection(reset=reset, model=model, collection=collection)
 
-    def insert_documents(self, documents: List[dict]):
+    def insert_documents(self, documents: List[dict], policy_docs : bool = False):
 
         """
         documents format:
@@ -35,21 +35,31 @@ class VectorStore:
         with _embedding_lock:
             embeddings = self.embedding_model.embed_documents(contents)
 
-        ids = [doc["id"] for doc in documents]
-        pids = [doc["pid"] for doc in documents]
         documents_names = [doc["document"] for doc in documents]
         pages = [doc["page_number"] for doc in documents]
         chunks = [doc["chunk_number"] for doc in documents]
-
+        ids = [doc["id"] for doc in documents]
         with _store_lock:
-            self.collection.insert([
-                ids,
-                pids,
-                documents_names,
-                pages,
-                chunks,
-                contents,
-                embeddings
-            ])
+            if policy_docs:
+                self.collection.insert([
+                    ids,
+                    documents_names,
+                    pages,
+                    chunks,
+                    contents,
+                    embeddings
+                ])
+            
+            else:
+                pids = [doc["pid"] for doc in documents]
+                self.collection.insert([
+                    ids,
+                    documents_names,
+                    pages,
+                    chunks,
+                    contents,
+                    pids,
+                    embeddings
+                ])
 
             self.collection.flush()

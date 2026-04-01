@@ -1,11 +1,14 @@
+# ingestion/cleaner.py
+
 import re
 import spacy
 from typing import List
 
+
 class TextCleaner:
 
     def __init__(self):
-        self.nlp = spacy.load("en_core_web_lg")
+        self.nlp = spacy.load("en_core_web_sm")
 
     def split_sentences(self, text: str) -> List[str]:
         doc = self.nlp(text)

@@ -1,13 +1,13 @@
-import os
-
-MILVUS_HOST = os.getenv("MILVUS_HOST")
-MILVUS_PORT = os.getenv("MILVUS_PORT")
+MILVUS_HOST = "localhost"
+MILVUS_PORT = "19530"
 
 COLLECTIONS = {
     "simCSE": "carbon_related_sentences",
     "e5": "e5_carbon_collection",
     "bge" : "bge_carbon_collection",
-    "nomic": "nomic_carbon_collection"
+    "nomic": "nomic_carbon_collection",
+    "vera": "vera_forestry_collection",
+    "policy_docs": "policy_docs_collection"
 }
 
 METRIC_TYPE = "COSINE"

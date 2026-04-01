@@ -6,8 +6,7 @@ from pymilvus import (
 from .config import VECTOR_DIMENSIONS
 
 
-def create_schema(collection : str = "e5"):
-
+def create_schema(model : str = "e5", collection : str = "e5"):
     fields = [
         FieldSchema(
             name="id",
@@ -15,11 +14,6 @@ def create_schema(collection : str = "e5"):
             is_primary=True,
             auto_id=False,
             max_length=200
-        ),
-        FieldSchema(
-            name="pid",
-            dtype=DataType.VARCHAR,
-            max_length=20
         ),
         FieldSchema(
             name="document",
@@ -38,12 +32,38 @@ def create_schema(collection : str = "e5"):
             name="content",
             dtype=DataType.VARCHAR,
             max_length=65535
+        )
+    ]
+    
+    if collection == "policy_docs":
+        fields.append(
+            FieldSchema(
+            name="vector",
+            dtype=DataType.FLOAT_VECTOR,
+            dim=VECTOR_DIMENSIONS[model]
+        )
+        )
+        return CollectionSchema(
+            fields=fields,
+            description="SDG policy sentence embeddings"
+        )
+        
+    modified  = [
+        FieldSchema(
+            name="pid",
+            dtype=DataType.VARCHAR,
+            max_length=20
         ),
         FieldSchema(
             name="vector",
             dtype=DataType.FLOAT_VECTOR,
-            dim=VECTOR_DIMENSIONS[collection]
+            dim=VECTOR_DIMENSIONS[model]
         )
     ]
 
-    return CollectionSchema(fields, description="Carbon registry sentence embeddings")
+    fields.extend(modified)
+
+    return CollectionSchema(
+        fields=fields,
+        description="Carbon registry sentence embeddings"
+    )

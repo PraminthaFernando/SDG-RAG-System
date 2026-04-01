@@ -1,3 +1,4 @@
+# batch_ingest_projects.py
 from logging import Logger
 import os
 import argparse
@@ -65,7 +66,7 @@ def process_project(path : Path, proj : str, workers : int, logger : Logger, sto
             
     logger.info(f"Total chunks prepared for store: {len(all_docs)}")
 
-    BATCH_SIZE = 5000
+    BATCH_SIZE = 500
 
     if not all_docs:
         logger.warning("No documents prepared. Exiting.")
@@ -101,7 +102,7 @@ def main():
 
     parser.add_argument("--path", type=str, required=True)
     parser.add_argument("--batch_size", type=int, default=32)
-    parser.add_argument("--workers", type=int, default=4)
+    parser.add_argument("--workers", type=int, default=2)
     parser.add_argument("--reset", type=bool, default=False)
 
     args = parser.parse_args()
@@ -113,10 +114,12 @@ def main():
 
     logger.info(f"Starting batch ingestion from: {args.path}")
 
-    embedding_model = EmbeddingFactory.create(model_type="remort", endpoint="cloudflared")
+    # pipeline = IngestionPipeline(pdf_base_path=args.path)
+    embedding_model = EmbeddingFactory.create("bge", batch_size=args.batch_size)
     vector_store = VectorStore(embedding_model)
-    vector_store.initialize(args.reset, collection="nomic")
-
+    vector_store.initialize(args.reset, model="bge", collection="bge")
+    # all_projects = []
+    
     projects = [
         proj for proj in os.listdir(args.path)
     ]
@@ -131,7 +134,7 @@ def main():
     with ThreadPoolExecutor(max_workers=args.workers) as executor:
         futures = [
             executor.submit(process_project, Path(args.path), proj, args.workers, logger, vector_store)
-            for proj in projects[31:]
+            for proj in projects
         ]
 
         for future in as_completed(futures):

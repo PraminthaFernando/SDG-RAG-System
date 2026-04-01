@@ -5,8 +5,8 @@ from .base_retriever import BaseRetriever
 
 class HybridRetriever(BaseRetriever):
 
-    def __init__(self, keyword_weight: float = 0.2, collection : str = "e5"):
-        self.dense = DenseRetriever(collection)
+    def __init__(self, keyword_weight: float = 0.2, model : str = "e5", collection : str = "e5"):
+        self.dense = DenseRetriever(model=model, collection=collection)
         self.keyword_weight = keyword_weight
 
     def _keyword_score(self, query: str, text: str) -> float:

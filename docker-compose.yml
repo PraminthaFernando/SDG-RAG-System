@@ -25,7 +25,7 @@ services:
       MINIO_ACCESS_KEY: minioadmin
       MINIO_SECRET_KEY: minioadmin
     ports:
-      - "9001:9001"
+      - "9002:9001"
       - "9000:9000"
     volumes:
       - ${DOCKER_VOLUME_DIRECTORY:-.}/volumes/minio:/minio_data
@@ -60,6 +60,17 @@ services:
     depends_on:
       - "etcd"
       - "minio"
+  
+  attu:
+    image: zilliz/attu:latest
+    container_name: attu
+    ports:
+      - "8000:3000"
+    environment:
+      MILVUS_URL: standalone:19530
+    depends_on:
+      standalone:
+        condition: service_started
 
 networks:
   default:

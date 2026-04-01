@@ -3,12 +3,13 @@ from .config import INDEX_PARAMS, COLLECTIONS
 from .schema import create_schema
 from .connection import connect_milvus
 
+
 class CollectionManager:
 
     def __init__(self):
         connect_milvus()
 
-    def create_collection(self, reset=False, collection: str = "e5"):
+    def create_collection(self, reset=False, model : str = "e5", collection: str = "e5"):
         collection_name = COLLECTIONS[collection]
         if utility.has_collection(collection_name):
             if reset:
@@ -16,7 +17,7 @@ class CollectionManager:
             else:
                 return Collection(collection_name)
 
-        schema = create_schema(collection=collection)
+        schema = create_schema(model=model, collection=collection)
         collection = Collection(
             name=collection_name,
             schema=schema

@@ -15,10 +15,22 @@ def run_pipeline(pid, embedding_model="simCSE"):
     retrieval_service = RetrievalService(
         mode="hybrid",
         use_reranker=True,
-        collection=embedding_model
+        model=embedding_model,
+        collection="vera"
     )
+    retriev_policy_service = RetrievalService(
+        mode="hybrid",
+        use_reranker=True,
+        model=embedding_model,
+        collection="policy_docs"
+    )
+    
     client = GroqLLMClient()
-    pipeline = QueryTransformationPipeline(retrieval_service, client)
+    pipeline = QueryTransformationPipeline(
+        retrieval_service=retrieval_service, 
+        llm_client=client, 
+        policy_service=retriev_policy_service
+    )
 
     final_output = {}
 

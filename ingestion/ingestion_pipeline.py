@@ -1,9 +1,11 @@
 from pathlib import Path
+from typing import List
 from .pdf_loader import PDFLoader
 from .table_extractor import TableExtractor
 from .cleaner import TextCleaner
 from .chunker import TextChunker
 from .models import IngestedDocument
+
 
 class IngestionPipeline:
 
@@ -14,9 +16,11 @@ class IngestionPipeline:
         self.chunker = TextChunker()
 
     def ingest(self, pid: str, filename: str) -> IngestedDocument:
-        document = self.loader.load(pid, filename)
-
+        # document = self.loader.load(pid, filename)
         pdf_path = str(Path(self.loader.base_path) / filename)
+        
+        table_boxes = self.table_extractor.get_table_boxes(pdf_path)
+        document = self.loader.load(pid, filename, table_boxes)
 
         new_pages = []
 

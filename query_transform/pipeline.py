@@ -6,8 +6,8 @@ from .decomposition.subquery_executor import SubqueryExecutor
 from .decomposition.aggregation import AnswerAggregator
 
 class QueryTransformationPipeline:
-    def __init__(self, retrieval_service, llm_client):
-        self.step_back = StepBackGenerator(llm_client)
+    def __init__(self, retrieval_service, llm_client, policy_service):
+        self.step_back = StepBackGenerator(llm_client, policy_service)
         self.decomposer = RecursiveDecomposer(llm_client)
         self.executor = SubqueryExecutor(retrieval_service, llm_client)
         self.aggregator = AnswerAggregator()
@@ -20,11 +20,16 @@ class QueryTransformationPipeline:
 
         # Decomposition
         if DECOMPOSITION_ENABLED:
-            subqueries = self.decomposer.transform(query)
+            subqueries = self.decomposer.transform(query, description)
         else:
             subqueries = [query]
 
-        sub_answers = self.executor.execute(subqueries, pid)
+        sub_answers, evidences = self.executor.execute(subqueries, pid)
+        if not evidences:
+            return {}
+        
         final_answer = self.aggregator.aggregate(query, sub_answers, description)
         content = final_answer["messages"][-1].content.replace("```json", "").replace("```", "").strip()
-        return json.loads(content)
+        parsed = json.loads(content)
+        parsed["evidences"] = evidences
+        return parsed
