@@ -1,0 +1,15 @@
+{
+    "project_id": "2535",
+    "project_name": "Skyridge Farms Advanced Solid Separation Project",
+    "description": "This project utilizes LWR's First Wave system to separate solids from animal waste at Skyridge Farms in Sunnyside, WA.",
+    "latitude": 46.39864,
+    "longitude": -120.019942,
+    "state_province": "WA",
+    "project_status": "Registered",
+    "annual_emission_reduction": 10000,
+    "buffer_pool_credits": null,
+    "project_category": "Livestock, enteric fermentation, and manure management",
+    "project_subcategory": null,
+    "registration_date": "2023-05-08",
+    "crediting_period": "2019-10-23 to 2026-10-22"
+}

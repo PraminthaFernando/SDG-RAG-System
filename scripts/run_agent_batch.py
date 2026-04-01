@@ -1,3 +1,4 @@
+# run_agent_batch.py
 import json
 import argparse
 import os
@@ -77,7 +78,7 @@ def main():
         mode="hybrid",
         use_reranker=True,
         model=args.embedding,
-        collection="bge"   # ✅ FIXED
+        collection="nomic"   # ✅ FIXED
     )
     retriev_policy_service = RetrievalService(
         mode="hybrid",

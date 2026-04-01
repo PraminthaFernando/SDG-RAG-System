@@ -61,10 +61,10 @@ def main():
     logger.info(f"Starting batch ingestion from: {args.path}")
 
     pipeline = IngestionPipeline(pdf_base_path=args.path)
-    embedding_model = EmbeddingFactory.create("e5", batch_size=args.batch_size)
+    embedding_model = EmbeddingFactory.create("nomic", batch_size=args.batch_size)
 
     vector_store = VectorStore(embedding_model)
-    vector_store.initialize(reset=args.reset, model="e5", collection="policy_docs")
+    vector_store.initialize(reset=args.reset, model="nomic", collection="policy_docs")
 
     all_docs = []
 

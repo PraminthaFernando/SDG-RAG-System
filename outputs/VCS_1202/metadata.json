@@ -1,0 +1,15 @@
+{
+    "project_id": "1202",
+    "project_name": "LOWER ZAMBEZI REDD+ PROJECT",
+    "description": "The Lower Zambezi REDD+ Project is a reducing emission from deforestation and degradation (REDD+) project on 38,781 ha (ha) of privately-owned land in Rufunsa District, Zambia.  The Project Area is known as \u2018Rufunsa Conservancy\u2019 (Conservancy),and is one of the last intact areas of forest within Lusaka Province (named after the nearby capital city), and provides a 60-kilometer buffer to Lower Zambezi National Park (NP), a strategic protected area in Zambia in a globally significant trans-frontier conservation area. Lower Zambezi NP is adjacent to Mana Pools National Park in Zimbabwe which is a UNESCO designated World Heritage Site. The population of the Project Zone is approximately 8,300 people living in 28 villages spread within 4 community zones.  The Project Proponent is BioCarbon Partners.",
+    "latitude": -15.494631,
+    "longitude": 29.296648,
+    "state_province": "Lusaka",
+    "project_status": "Registered",
+    "annual_emission_reduction": 189117,
+    "buffer_pool_credits": 282811,
+    "project_category": "Agriculture Forestry and Other Land Use",
+    "project_subcategory": "REDD",
+    "registration_date": "2020-04-06",
+    "crediting_period": "2009-10-01 to 2039-09-30"
+}

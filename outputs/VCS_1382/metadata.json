@@ -1,0 +1,15 @@
+{
+    "project_id": "1382",
+    "project_name": "The Envira Amazonia Project - A Tropical Forest Conservation Project in Acre, Brazil",
+    "description": "The Envira Amazonia Project is a VCS and CCBS designed REDD+ project in the State of Acre, Brazil which aims to protect up to 200,000 hectares of tropical rainforest. Furthermore, the Envira Amazonia Project will simultaneously preserve rich biodiversity and a wide range of ecosystem services, provide direct benefits to local communities, and mitigate the release of ~12.6 million metric tonnes of carbon dioxide emissions over the first 10 years of the Project.",
+    "latitude": -8.847445,
+    "longitude": -70.177176,
+    "state_province": "Acre",
+    "project_status": "Verification approval requested",
+    "annual_emission_reduction": 1259646,
+    "buffer_pool_credits": 4503981,
+    "project_category": "Agriculture Forestry and Other Land Use",
+    "project_subcategory": "REDD",
+    "registration_date": "2020-04-06",
+    "crediting_period": "2012-08-02 to 2042-08-01"
+}

@@ -1,6 +1,9 @@
 import fitz
 from pathlib import Path
+import time
+
 from .models import PageContent, IngestedDocument
+
 
 class PDFLoader:
     def __init__(self, base_path: str):
@@ -13,9 +16,13 @@ class PDFLoader:
 
     def extract_text_from_page(self, page, table_boxes=None):
 
+        t0 = time.time()
         words = page.get_text("words")
+        print(f"      🔤 words extracted: {len(words)} in {round(time.time() - t0, 2)}s")
+
         filtered_words = []
 
+        t0 = time.time()
         for word in words:
 
             if table_boxes:
@@ -24,26 +31,42 @@ class PDFLoader:
 
             filtered_words.append(word[4])
 
+        print(f"      🧹 words filtered: {len(filtered_words)} in {round(time.time() - t0, 2)}s")
+
         return " ".join(filtered_words)
 
     def load(self, pid: str, filename: str, table_boxes_per_page=None) -> IngestedDocument:
 
+        start_total = time.time()
+
         file_path = self.base_path / filename
+
+        print(f"\n📄 [{pid}] Opening PDF: {file_path}")
 
         if not file_path.exists():
             raise FileNotFoundError(f"{file_path} not found.")
 
+        t0 = time.time()
         pdf = fitz.open(file_path)
+        print(f"✅ [{pid}] PDF opened in {round(time.time() - t0, 2)}s | pages={len(pdf)}")
 
         pages = []
 
         for i, page in enumerate(pdf, start=1):
 
+            page_start = time.time()
+
+            print(f"\n➡️ [{pid}] Page {i}/{len(pdf)}")
+
             boxes = None
             if table_boxes_per_page:
                 boxes = table_boxes_per_page.get(i, [])
+                print(f"   📦 table boxes: {len(boxes)}")
 
+            # ---- extract text ----
+            t0 = time.time()
             page_text = self.extract_text_from_page(page, boxes)
+            print(f"   📝 text extracted in {round(time.time() - t0, 2)}s | length={len(page_text)}")
 
             pages.append(
                 PageContent(
@@ -51,6 +74,10 @@ class PDFLoader:
                     text=page_text
                 )
             )
+
+            print(f"   ⏱️ page done in {round(time.time() - page_start, 2)}s")
+
+        print(f"\n🎉 [{pid}] PDF LOAD COMPLETE in {round(time.time() - start_total, 2)}s")
 
         return IngestedDocument(
             pid=pid,

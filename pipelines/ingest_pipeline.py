@@ -20,7 +20,7 @@ class ProjectIngestPipeline(BasePipeline):
         document = ingestion.ingest(pid=self.pid, filename=self.filename)
 
         # 2. Embeddings
-        embedding_model = EmbeddingFactory.create("e5", batch_size=32)
+        embedding_model = EmbeddingFactory.create("nomic", batch_size=32)
 
         # 3. Vector store
         vector_store = VectorStore(embedding_model)

@@ -1,0 +1,168 @@
+{
+    "1. No poverty": [
+        {
+            "target": "1.1 By 2030, eradicate extreme poverty for all people everywhere, currently measured as people living on less than $1.25 a day",
+            "indicator": "1.1.1 Proportion of the population living below the international poverty line by sex, age, employment status and geographic location (urban/rural)"
+        },
+        {
+            "target": "1.2 By 2030, reduce at least by half the proportion of men, women and children of all ages living in poverty in all its dimensions according to national definitions",
+            "indicator": "1.2.1 Proportion of population living below the national poverty line, by sex and age"
+        }
+    ],
+    "2. Zero hunger": [
+        {
+            "target": "2.4 By 2030, ensure sustainable food production systems and implement resilient agricultural practices...",
+            "indicator": "Change in SOC stock due to activities implemented in project activity"
+        },
+        {
+            "target": "2.3 By 2030, double the agricultural productivity and incomes of small-scale food producers...",
+            "indicator": "Change in farmer income as a result of project, by gender and and indigenous status"
+        }
+    ],
+    "3. Good health and well being": [
+        {
+            "target": "3.9 By 2030, substantially reduce the number of deaths and illnesses from hazardous chemicals and air, water and soil pollution and contamination",
+            "indicator": "Area under reduced/avoided open burning of biomass, crop residue"
+        },
+        {
+            "target": "3.9 By 2030, substantially reduce the number of deaths and illnesses from hazardous chemicals and air, water and soil pollution and contamination",
+            "indicator": "Number of farmers reduced/avoided open burning of biomass, crop residue"
+        }
+    ],
+    "4. Quality education": [
+        {
+            "target": "4.4 By 2030, substantially increase the number of youth and adults who have relevant skills...",
+            "indicator": "Number of employees provided skill development training"
+        },
+        {
+            "target": "4.4 By 2030, substantially increase the number of youth and adults who have relevant skills...",
+            "indicator": "Number of training hours provided for employees (full-time, part-time, or temporary), disaggregated per gender"
+        }
+    ],
+    "5. Gender equality": [
+        {
+            "target": "5.5 Ensure women’s full and effective participation...",
+            "indicator": "5.5.2 Proportion of women in managerial positions"
+        },
+        {
+            "target": "5.4 Recognize and value unpaid care and domestic work...",
+            "indicator": "Average time saving associated with cooking time and fuel collection"
+        },
+        {
+            "target": "5.1 End all forms of discrimination against all women and girls everywhere",
+            "indicator": "Gender wage equity"
+        },
+        {
+            "target": "5.5 Ensure women’s full and effective participation...",
+            "indicator": "Number of women serving in managerial/ leadership /ownership role"
+        }
+    ],
+    "6. Clean water and sanitation": [
+        {
+            "target": "6.6 By 2020, protect and restore water-related ecosystems...",
+            "indicator": "Turbidity of (river) water"
+        },
+        {
+            "target": "6.4 By 2030, substantially increase water-use efficiency...",
+            "indicator": "Water retention capacity"
+        }
+    ],
+    "7. Affordable and clean energy": [
+        {
+            "target": "7.1 By 2030, ensure universal access...",
+            "indicator": "Number of beneficiaries: Households"
+        },
+        {
+            "target": "7.1 By 2030, ensure universal access...",
+            "indicator": "Number of beneficiaries: Individuals"
+        }
+    ],
+    "8. Decent work and economic growth": [
+        {
+            "target": "8.5 By 2030, achieve full and productive employment...",
+            "indicator": "Total number of jobs"
+        },
+        {
+            "target": "8.5 By 2030, achieve full and productive employment...",
+            "indicator": "Total number of employees earning above local minimum wage"
+        },
+        {
+            "target": "8.5 By 2030, achieve full and productive employment...",
+            "indicator": "Total Number of employees paid living wage"
+        },
+        {
+            "target": "8.5 By 2030, achieve full and productive employment...",
+            "indicator": "Direct in-field labor created"
+        },
+        {
+            "target": "8.9 By 2030, promote sustainable tourism that creates jobs...",
+            "indicator": "Economic value generated locally via employment"
+        },
+        {
+            "target": "8.5 By 2030, achieve full and productive employment...",
+            "indicator": "Income generation from other activities for example ecotourism"
+        },
+        {
+            "target": "8.5 By 2030, achieve full and productive employment...",
+            "indicator": "8.5.1 Average hourly earnings of employees, by sex, age, occupation and persons with disabilities"
+        }
+    ],
+    "12. Responsible consumption and production": [
+        {
+            "target": "12.4 By 2020, achieve environmentally sound management of chemicals...",
+            "indicator": "Average reduction (%) in synthetic fertiliser used per ha"
+        },
+        {
+            "target": "12.4 By 2020, achieve environmentally sound management of chemicals...",
+            "indicator": "Average reduction (%) in pesticide used per ha"
+        }
+    ],
+    "13. Climate action": [
+        {
+            "target": "13.2 Integrate climate change measures into national policies...",
+            "indicator": "Amount of GHGs emissions avoided or sequestered"
+        }
+    ],
+    "15. Life on land": [
+        {
+            "target": "15.1 Ensure conservation and sustainable use of terrestrial ecosystems...",
+            "indicator": "Total non-renewable wood fuel saved"
+        },
+        {
+            "target": "15.2 Promote sustainable forest management...",
+            "indicator": "Forest areas managed sustainably for forest products including sustainable produced fuelwood"
+        },
+        {
+            "target": "15.2 Promote sustainable forest management...",
+            "indicator": "Total above and below ground biomass stock in forest"
+        },
+        {
+            "target": "15.2 Promote sustainable forest management...",
+            "indicator": "Total area of Trees Planted"
+        },
+        {
+            "target": "15.5 Protect and prevent extinction of threatened species",
+            "indicator": "Total protected Land Area"
+        },
+        {
+            "target": "15.8 Prevent introduction of invasive species",
+            "indicator": "Total Area of Trees Planted: Native Species"
+        },
+        {
+            "target": "15.5 Protect and prevent extinction of threatened species",
+            "indicator": "Number of protected threatened species in the project area & conservation status of species"
+        },
+        {
+            "target": "15.8 Reduce impact of invasive species",
+            "indicator": "Trends in species diversity"
+        },
+        {
+            "target": "15.8 Reduce impact of invasive species",
+            "indicator": "Trends in species distribution"
+        },
+        {
+            "target": "15.5 Protect and prevent extinction of threatened species",
+            "indicator": "Total Area under sustainable forest management"
+        }
+    ]
+}

@@ -1,0 +1,15 @@
+{
+    "project_id": "1367",
+    "project_name": "EFM Improved Forest Management Group Project",
+    "description": "The EFM Improved Forest Management Project is a group project that has been developed using the Verified Carbon Standard (VCS) and the associated VM0003 Methodology for improved forest management through extension of rotation age (IFM ERA) on EFM managed forestlands. The geographic areas that are eligible under this group project are forestlands located within the Pacific Northwest States of Oregon, Washington and California. Another eligibility constraint is that the project areas must be managed according to FSC Standards. The first project activity instance of this project is the Moss Creek Reserve Project Area which is 982 acres and is located within the Moss Creek watershed on the Garibaldi Forest property. The Garibaldi Forest property is 4822 acres of private land owned in fee by Garibaldi Forest Management and managed by EFM Investments & Advisory (EFM). In 2019 EFM added a second and third instance to the project, which increased the project area to 27,328 acres. ~ EFM is a for-profit FSC certified forestland investment manager that manages 130,000+ acres forestland in the Pacific Northwest.",
+    "latitude": 45.551814,
+    "longitude": -123.830556,
+    "state_province": "OR",
+    "project_status": "Verification approval requested",
+    "annual_emission_reduction": 5001,
+    "buffer_pool_credits": 24685,
+    "project_category": "Agriculture Forestry and Other Land Use",
+    "project_subcategory": "IFM",
+    "registration_date": "2020-04-06",
+    "crediting_period": "2010-02-23 to 2040-02-22"
+}
