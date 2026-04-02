@@ -1,0 +1,776 @@
+{
+    "sectors": {
+        "forestry": {
+            "sdgs": {
+                "1": {
+                    "sdg_id": "1",
+                    "sdg_name": "No poverty",
+                    "targets": {
+                        "1.1": {
+                            "target_id": "1.1",
+                            "target_text": "1.1 By 2030, eradicate extreme poverty for all people everywhere, currently measured as people living on less than $1.25 a day",
+                            "indicators": {
+                                "1.1.i1": {
+                                    "indicator_id": "1.1.i1",
+                                    "indicator_text": "1.1.1 Proportion of the population living below the international poverty line by sex, age, employment status and geographic location (urban/rural)",
+                                    "description": "Refer to E-handbook on SDG indic https://unstats.un.org/wiki/display/SDGeHandbook/Goal+1",
+                                    "guidance": null,
+                                    "data_unit": null
+                                }
+                            }
+                        },
+                        "1.2": {
+                            "target_id": "1.2",
+                            "target_text": "1.2 By 2030, reduce at least by half the proportion of men, women and children of all ages living in poverty in all its dimensions according to national definitions",
+                            "indicators": {
+                                "1.2.i1": {
+                                    "indicator_id": "1.2.i1",
+                                    "indicator_text": "1.2.1 Proportion of population living below the national poverty line, by sex and age",
+                                    "description": "Refer to E-handbook on SDG indic https://unstats.un.org/wiki/display/SDGeHandbook/Goal+1",
+                                    "guidance": null,
+                                    "data_unit": null
+                                }
+                            }
+                        }
+                    }
+                },
+                "2": {
+                    "sdg_id": "2",
+                    "sdg_name": "Zero hunger",
+                    "targets": {
+                        "2.3": {
+                            "target_id": "2.3",
+                            "target_text": "2.3 By 2030, double the agricultural productivity and incomes of small-scale food producers",
+                            "indicators": {
+                                "2.3.i1": {
+                                    "indicator_id": "2.3.i1",
+                                    "indicator_text": "Change in farmer income as a result of project, by gender and and indigenous status",
+                                    "description": "Refers to change in farmer income due to adoption of measures implemented as part of project activity",
+                                    "guidance": "May be compiled using farmer surveys where detailed income surveys are unavailable",
+                                    "data_unit": "Percentage increase in average annual salary"
+                                }
+                            }
+                        },
+                        "2.4": {
+                            "target_id": "2.4",
+                            "target_text": "2.4 By 2030, ensure sustainable food production systems and implement resilient agricultural practices",
+                            "indicators": {
+                                "2.4.i1": {
+                                    "indicator_id": "2.4.i1",
+                                    "indicator_text": "Change in SOC stock due to activities implemented in project activity",
+                                    "description": "Refers to the change in SOC level due to sustainable soil management practices implemented in the reporting period",
+                                    "guidance": "As per applicable methodology",
+                                    "data_unit": "%"
+                                }
+                            }
+                        }
+                    }
+                },
+                "3": {
+                    "sdg_id": "3",
+                    "sdg_name": "Good health and well being",
+                    "targets": {
+                        "3.9": {
+                            "target_id": "3.9",
+                            "target_text": "3.9 Reduce deaths and illnesses from hazardous chemicals and pollution",
+                            "indicators": {
+                                "3.9.i1": {
+                                    "indicator_id": "3.9.i1",
+                                    "indicator_text": "Area under reduced/avoided open burning of biomass, crop residue",
+                                    "description": "Total land area where alternative measures are implemented to avoid open biomass burning",
+                                    "guidance": "Presence of baseline open burning must be established through inspection",
+                                    "data_unit": "ha"
+                                },
+                                "3.9.i2": {
+                                    "indicator_id": "3.9.i2",
+                                    "indicator_text": "Number of farmers reduced/avoided open burning of biomass, crop residue",
+                                    "description": "Number of farmers adopting alternatives to open burning",
+                                    "guidance": "Baseline open burning must be verified",
+                                    "data_unit": "Number"
+                                }
+                            }
+                        }
+                    }
+                },
+                "4": {
+                    "sdg_id": "4",
+                    "sdg_name": "Quality education",
+                    "targets": {
+                        "4.4": {
+                            "target_id": "4.4",
+                            "target_text": "4.4 Increase number of youth and adults with relevant skills",
+                            "indicators": {
+                                "4.4.i1": {
+                                    "indicator_id": "4.4.i1",
+                                    "indicator_text": "Number of employees provided skill development training",
+                                    "description": "Number of employees receiving training",
+                                    "guidance": "Training categorized as skills-based, technical, governance, etc.",
+                                    "data_unit": "Number"
+                                },
+                                "4.4.i2": {
+                                    "indicator_id": "4.4.i2",
+                                    "indicator_text": "Number of training hours provided for employees (full-time, part-time, or temporary), disaggregated per gender",
+                                    "description": "Total training hours delivered",
+                                    "guidance": "Includes internal and external training opportunities",
+                                    "data_unit": "Number"
+                                }
+                            }
+                        }
+                    }
+                },
+                "5": {
+                    "sdg_id": "5",
+                    "sdg_name": "Gender equality",
+                    "targets": {
+                        "5.1": {
+                            "target_id": "5.1",
+                            "target_text": "5.1 End discrimination against women",
+                            "indicators": {
+                                "5.1.i1": {
+                                    "indicator_id": "5.1.i1",
+                                    "indicator_text": "Gender wage equity",
+                                    "description": "Ratio of average wage paid to female employees compared to male employees",
+                                    "guidance": "Use wage comparison formula",
+                                    "data_unit": "Ratio"
+                                }
+                            }
+                        },
+                        "5.4": {
+                            "target_id": "5.4",
+                            "target_text": "5.4 Recognize unpaid care work",
+                            "indicators": {
+                                "5.4.i1": {
+                                    "indicator_id": "5.4.i1",
+                                    "indicator_text": "Average time saving associated with cooking time and fuel collection",
+                                    "description": "Time savings due to adoption of project technology",
+                                    "guidance": "Refer to Gold Standard gender guidelines",
+                                    "data_unit": "minutes/hr per household"
+                                }
+                            }
+                        },
+                        "5.5": {
+                            "target_id": "5.5",
+                            "target_text": "5.5 Ensure women\u2019s full and effective participation",
+                            "indicators": {
+                                "5.5.i1": {
+                                    "indicator_id": "5.5.i1",
+                                    "indicator_text": "5.5.2 Proportion of women in managerial positions",
+                                    "description": "Percentage of women in managerial positions",
+                                    "guidance": "Refer to SDG 5.5.2 metadata",
+                                    "data_unit": "%"
+                                },
+                                "5.5.i2": {
+                                    "indicator_id": "5.5.i2",
+                                    "indicator_text": "Number of women serving in managerial/ leadership /ownership role",
+                                    "description": "Number of female managers and leaders",
+                                    "guidance": "Count unique female individuals in leadership",
+                                    "data_unit": "Number"
+                                }
+                            }
+                        }
+                    }
+                },
+                "6": {
+                    "sdg_id": "6",
+                    "sdg_name": "Clean water and sanitation",
+                    "targets": {
+                        "6.4": {
+                            "target_id": "6.4",
+                            "target_text": "6.4 Increase water-use efficiency",
+                            "indicators": {
+                                "6.4.i1": {
+                                    "indicator_id": "6.4.i1",
+                                    "indicator_text": "Water retention capacity",
+                                    "description": "Change in soil or landscape water retention capacity due to project activities",
+                                    "guidance": "Assess via hydrological or soil moisture monitoring",
+                                    "data_unit": null
+                                }
+                            }
+                        },
+                        "6.6": {
+                            "target_id": "6.6",
+                            "target_text": "6.6 Protect and restore water-related ecosystems",
+                            "indicators": {
+                                "6.6.i1": {
+                                    "indicator_id": "6.6.i1",
+                                    "indicator_text": "Turbidity of (river) water",
+                                    "description": "Measurement of river water turbidity levels within the project area",
+                                    "guidance": "Monitoring should compare baseline and reporting period measurements",
+                                    "data_unit": "%"
+                                }
+                            }
+                        }
+                    }
+                },
+                "7": {
+                    "sdg_id": "7",
+                    "sdg_name": "Affordable and clean energy",
+                    "targets": {
+                        "7.1": {
+                            "target_id": "7.1",
+                            "target_text": "7.1 Ensure universal access to electricity",
+                            "indicators": {
+                                "7.1.i1": {
+                                    "indicator_id": "7.1.i1",
+                                    "indicator_text": "Number of beneficiaries: Households",
+                                    "description": "Number of unique households provided access to clean fuels and technologies",
+                                    "guidance": "May estimate using number of operational units distributed",
+                                    "data_unit": "Number of households"
+                                },
+                                "7.1.i2": {
+                                    "indicator_id": "7.1.i2",
+                                    "indicator_text": "Number of beneficiaries: Individuals",
+                                    "description": "Number of unique individuals provided access to clean fuels and technologies",
+                                    "guidance": "Account only users actively using clean fuels",
+                                    "data_unit": "Number of users"
+                                }
+                            }
+                        }
+                    }
+                },
+                "8": {
+                    "sdg_id": "8",
+                    "sdg_name": "Decent work and economic growth",
+                    "targets": {
+                        "8.5": {
+                            "target_id": "8.5",
+                            "target_text": "8.5 Achieve full and productive employment",
+                            "indicators": {
+                                "8.5.i1": {
+                                    "indicator_id": "8.5.i1",
+                                    "indicator_text": "8.5.1 Average hourly earnings of employees, by sex, age, occupation and persons with disabilities",
+                                    "description": "Mean hourly earnings disaggregated by sex and demographic characteristics",
+                                    "guidance": "Calculate gender pay gap where applicable",
+                                    "data_unit": null
+                                },
+                                "8.5.i2": {
+                                    "indicator_id": "8.5.i2",
+                                    "indicator_text": "Direct in-field labor created",
+                                    "description": "Total work hours created by project activities",
+                                    "guidance": "Report total hours equivalent labor created, disaggregated by gender",
+                                    "data_unit": "Person-hours"
+                                },
+                                "8.5.i3": {
+                                    "indicator_id": "8.5.i3",
+                                    "indicator_text": "Income generation from other activities for example ecotourism",
+                                    "description": "Revenue generated from additional livelihood activities",
+                                    "guidance": "Document tourism and other enterprise income streams",
+                                    "data_unit": null
+                                },
+                                "8.5.i4": {
+                                    "indicator_id": "8.5.i4",
+                                    "indicator_text": "Total Number of employees paid living wage",
+                                    "description": "Number of employees receiving a living wage",
+                                    "guidance": "Refer to Anker methodology or equivalent",
+                                    "data_unit": "USD or local currency per month"
+                                },
+                                "8.5.i5": {
+                                    "indicator_id": "8.5.i5",
+                                    "indicator_text": "Total number of employees earning above local minimum wage",
+                                    "description": "Number of employees earning above minimum wage",
+                                    "guidance": "Provide reference to official minimum wage source",
+                                    "data_unit": "Number"
+                                },
+                                "8.5.i6": {
+                                    "indicator_id": "8.5.i6",
+                                    "indicator_text": "Total number of jobs",
+                                    "description": "Total jobs generated as a result of project implementation",
+                                    "guidance": "Disclose employees by contract type and gender",
+                                    "data_unit": "Number"
+                                }
+                            }
+                        },
+                        "8.9": {
+                            "target_id": "8.9",
+                            "target_text": "8.9 Promote sustainable tourism and local economic development",
+                            "indicators": {
+                                "8.9.i1": {
+                                    "indicator_id": "8.9.i1",
+                                    "indicator_text": "Economic value generated locally via employment",
+                                    "description": "Total monetary value paid towards local employment",
+                                    "guidance": "Define local employment clearly",
+                                    "data_unit": "$"
+                                }
+                            }
+                        }
+                    }
+                },
+                "12": {
+                    "sdg_id": "12",
+                    "sdg_name": "Responsible consumption and production",
+                    "targets": {
+                        "12.4": {
+                            "target_id": "12.4",
+                            "target_text": "12.4 Environmentally sound management of chemicals",
+                            "indicators": {
+                                "12.4.i1": {
+                                    "indicator_id": "12.4.i1",
+                                    "indicator_text": "Average reduction (%) in pesticide used per ha",
+                                    "description": "Percentage reduction in pesticide usage",
+                                    "guidance": "Include WHO hazard classifications",
+                                    "data_unit": "%"
+                                },
+                                "12.4.i2": {
+                                    "indicator_id": "12.4.i2",
+                                    "indicator_text": "Average reduction (%) in synthetic fertiliser used per ha",
+                                    "description": "Percentage reduction in synthetic fertilizer usage",
+                                    "guidance": "Compare baseline and reporting period",
+                                    "data_unit": "%"
+                                }
+                            }
+                        }
+                    }
+                },
+                "13": {
+                    "sdg_id": "13",
+                    "sdg_name": "Climate action",
+                    "targets": {
+                        "13.2": {
+                            "target_id": "13.2",
+                            "target_text": "13.2 Integrate climate change measures into policies",
+                            "indicators": {
+                                "13.2.i1": {
+                                    "indicator_id": "13.2.i1",
+                                    "indicator_text": "Amount of GHGs emissions avoided or sequestered",
+                                    "description": "Total greenhouse gas emissions avoided or sequestered",
+                                    "guidance": "Use validated emission reduction methodologies",
+                                    "data_unit": "tCO2eq"
+                                }
+                            }
+                        }
+                    }
+                },
+                "15": {
+                    "sdg_id": "15",
+                    "sdg_name": "Life on land",
+                    "targets": {
+                        "15.1": {
+                            "target_id": "15.1",
+                            "target_text": "15.1 Ensure conservation of terrestrial ecosystems",
+                            "indicators": {
+                                "15.1.i1": {
+                                    "indicator_id": "15.1.i1",
+                                    "indicator_text": "Total non-renewable wood fuel saved",
+                                    "description": "Total amount of non-Renewable biomass fuel saved",
+                                    "guidance": "Adjust for fraction of non-Renewable biomass",
+                                    "data_unit": "tonnes/year"
+                                }
+                            }
+                        },
+                        "15.2": {
+                            "target_id": "15.2",
+                            "target_text": "15.2 Promote sustainable forest management",
+                            "indicators": {
+                                "15.2.i1": {
+                                    "indicator_id": "15.2.i1",
+                                    "indicator_text": "Forest areas managed sustainably for forest products including sustainable produced fuelwood",
+                                    "description": "Total forest area under sustainable management",
+                                    "guidance": "Report area under certified or verified management",
+                                    "data_unit": "ha"
+                                },
+                                "15.2.i2": {
+                                    "indicator_id": "15.2.i2",
+                                    "indicator_text": "Total above and below ground biomass stock in forest",
+                                    "description": "Increment in forest biomass stock",
+                                    "guidance": "Apply GHG quantification methodologies",
+                                    "data_unit": "tonnes of dry biomass"
+                                },
+                                "15.2.i3": {
+                                    "indicator_id": "15.2.i3",
+                                    "indicator_text": "Total area of Trees Planted",
+                                    "description": "Area of land on which trees were planted",
+                                    "guidance": "Report cumulative planted area",
+                                    "data_unit": "ha"
+                                }
+                            }
+                        },
+                        "15.5": {
+                            "target_id": "15.5",
+                            "target_text": "15.5 Protect threatened species",
+                            "indicators": {
+                                "15.5.i1": {
+                                    "indicator_id": "15.5.i1",
+                                    "indicator_text": "Number of protected threatened species in the project area & conservation status of species",
+                                    "description": "Number of threatened species protected in project area",
+                                    "guidance": "Segment by IUCN conservation status",
+                                    "data_unit": "Number or %"
+                                },
+                                "15.5.i2": {
+                                    "indicator_id": "15.5.i2",
+                                    "indicator_text": "Total Area under sustainable forest management",
+                                    "description": "Total land area under sustainable management practices",
+                                    "guidance": "Report managed area annually",
+                                    "data_unit": "ha"
+                                },
+                                "15.5.i3": {
+                                    "indicator_id": "15.5.i3",
+                                    "indicator_text": "Total protected Land Area",
+                                    "description": "Total land area marked as protected",
+                                    "guidance": "Report percentage of project area protected",
+                                    "data_unit": "ha"
+                                }
+                            }
+                        },
+                        "15.8": {
+                            "target_id": "15.8",
+                            "target_text": "15.8 Prevent invasive species",
+                            "indicators": {
+                                "15.8.i1": {
+                                    "indicator_id": "15.8.i1",
+                                    "indicator_text": "Total Area of Trees Planted: Native Species",
+                                    "description": "Area planted with native species",
+                                    "guidance": "Report percentage of native species coverage",
+                                    "data_unit": "% or ha"
+                                },
+                                "15.8.i2": {
+                                    "indicator_id": "15.8.i2",
+                                    "indicator_text": "Trends in species distribution",
+                                    "description": "Distribution trends of planted and native species",
+                                    "guidance": "Derived from functional trait analysis",
+                                    "data_unit": "%"
+                                },
+                                "15.8.i3": {
+                                    "indicator_id": "15.8.i3",
+                                    "indicator_text": "Trends in species diversity",
+                                    "description": "Changes in species diversity within the project area",
+                                    "guidance": "Track inter- and intra-specific diversity",
+                                    "data_unit": "%"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "renewables": {
+            "sdgs": {
+                "1": {
+                    "sdg_id": "1",
+                    "sdg_name": "No poverty",
+                    "targets": {
+                        "1.1": {
+                            "target_id": "1.1",
+                            "target_text": "1.1 By 2030, eradicate extreme poverty for all people everywhere, currently measured as people living on less than $1.25 a day",
+                            "indicators": {
+                                "1.1.i1": {
+                                    "indicator_id": "1.1.i1",
+                                    "indicator_text": "1.1.1 Proportion of the population living below the international poverty line by sex, age, employment status and geographic location (urban/rural)",
+                                    "description": "Refer to E-handbook on SDG indic https://unstats.un.org/wiki/display/SDGeHandbook/Goal+1",
+                                    "guidance": null,
+                                    "data_unit": null
+                                }
+                            }
+                        },
+                        "1.2": {
+                            "target_id": "1.2",
+                            "target_text": "1.2 By 2030, reduce at least by half the proportion of men, women and children of all ages living in poverty in all its dimensions according to national definitions",
+                            "indicators": {
+                                "1.2.i1": {
+                                    "indicator_id": "1.2.i1",
+                                    "indicator_text": "1.2.1 Proportion of population living below the national poverty line, by sex and age",
+                                    "description": "Refer to E-handbook on SDG indic https://unstats.un.org/wiki/display/SDGeHandbook/Goal+1",
+                                    "guidance": null,
+                                    "data_unit": null
+                                }
+                            }
+                        }
+                    }
+                },
+                "4": {
+                    "sdg_id": "4",
+                    "sdg_name": "Quality education",
+                    "targets": {
+                        "4.4": {
+                            "target_id": "4.4",
+                            "target_text": "4.4 Increase number of youth and adults with relevant skills",
+                            "indicators": {
+                                "4.4.i1": {
+                                    "indicator_id": "4.4.i1",
+                                    "indicator_text": "Number of employees provided skill development training",
+                                    "description": "Refers to the number of employees (full-time, part-time, or temporary), by gender who received training services of any type via project during the reporting period.",
+                                    "guidance": "It refers to the number of individual employees, by gender who received training of any type via project during the reporting period. Training can be categorized as: (1) skills-based training; (2) cross-job functions; (3) literacy and life skills; (4) diversity and inclusion.",
+                                    "data_unit": "Number"
+                                },
+                                "4.4.i2": {
+                                    "indicator_id": "4.4.i2",
+                                    "indicator_text": "Number of training hours provided for employees (full-time, part-time, or temporary), disaggregated per gender",
+                                    "description": "Refers to the sum of all training hours provided to employees.",
+                                    "guidance": "Number of training hours provided for employees during the reporting period.",
+                                    "data_unit": "Number"
+                                }
+                            }
+                        }
+                    }
+                },
+                "5": {
+                    "sdg_id": "5",
+                    "sdg_name": "Gender equality",
+                    "targets": {
+                        "5.1": {
+                            "target_id": "5.1",
+                            "target_text": "5.1 End discrimination against women",
+                            "indicators": {
+                                "5.1.i1": {
+                                    "indicator_id": "5.1.i1",
+                                    "indicator_text": "Gender wage equity",
+                                    "description": "Ratio of the average wage paid to female employees compared to male employees for the same position.",
+                                    "guidance": "(Average female wage) / (Average male wage)",
+                                    "data_unit": "Ratio"
+                                }
+                            }
+                        },
+                        "5.4": {
+                            "target_id": "5.4",
+                            "target_text": "5.4 Recognize unpaid care work",
+                            "indicators": {
+                                "5.4.i1": {
+                                    "indicator_id": "5.4.i1",
+                                    "indicator_text": "Average time saving associated with cooking time and fuel collection",
+                                    "description": "Refers to the time saving due to adoption of project technology.",
+                                    "guidance": "Project shall report how saved time is used.",
+                                    "data_unit": "minutes/hr per household"
+                                }
+                            }
+                        },
+                        "5.5": {
+                            "target_id": "5.5",
+                            "target_text": "5.5 Ensure women\u2019s full and effective participation",
+                            "indicators": {
+                                "5.5.i1": {
+                                    "indicator_id": "5.5.i1",
+                                    "indicator_text": "5.5.2 Proportion of women in managerial positions",
+                                    "description": "Proportion of females in total managerial positions.",
+                                    "guidance": "Refer to SDG metadata.",
+                                    "data_unit": "%"
+                                },
+                                "5.5.i2": {
+                                    "indicator_id": "5.5.i2",
+                                    "indicator_text": "Number of women serving in managerial/ leadership /ownership role",
+                                    "description": "Refers to number of female managers employed.",
+                                    "guidance": "Number of unique female managers.",
+                                    "data_unit": "Number"
+                                }
+                            }
+                        }
+                    }
+                },
+                "7": {
+                    "sdg_id": "7",
+                    "sdg_name": "Affordable and clean energy",
+                    "targets": {
+                        "7.1": {
+                            "target_id": "7.1",
+                            "target_text": "7.1 Ensure universal access to electricity",
+                            "indicators": {
+                                "7.1.i1": {
+                                    "indicator_id": "7.1.i1",
+                                    "indicator_text": "7.1.1 Proportion of population with access to electricity",
+                                    "description": "Proportion of population with access to electricity.",
+                                    "guidance": "Disaggregate by grid/off-grid.",
+                                    "data_unit": "%"
+                                },
+                                "7.1.i2": {
+                                    "indicator_id": "7.1.i2",
+                                    "indicator_text": "Number of beneficiaries: Households",
+                                    "description": "Unique households provided access to clean energy.",
+                                    "guidance": "Follow conservative estimation approach.",
+                                    "data_unit": "Number of households"
+                                },
+                                "7.1.i3": {
+                                    "indicator_id": "7.1.i3",
+                                    "indicator_text": "Number of beneficiaries: Individuals",
+                                    "description": "Unique individuals provided access to clean energy.",
+                                    "guidance": "Account only active users.",
+                                    "data_unit": "Number of users"
+                                }
+                            }
+                        },
+                        "7.2": {
+                            "target_id": "7.2",
+                            "target_text": "7.2 Increase Renewable energy share",
+                            "indicators": {
+                                "7.2.i1": {
+                                    "indicator_id": "7.2.i1",
+                                    "indicator_text": "Total electricity consumed: Renewable",
+                                    "description": "Electricity consumption produced via Renewable technologies.",
+                                    "guidance": "Disaggregate by user category.",
+                                    "data_unit": "MWh"
+                                },
+                                "7.2.i2": {
+                                    "indicator_id": "7.2.i2",
+                                    "indicator_text": "Total electricity produced: Renewable",
+                                    "description": "Net electricity production from Renewable sources.",
+                                    "guidance": "Provide net electricity generated.",
+                                    "data_unit": "MWh"
+                                },
+                                "7.2.i3": {
+                                    "indicator_id": "7.2.i3",
+                                    "indicator_text": "Total thermal energy produced: Renewable",
+                                    "description": "Thermal energy production from Renewable sources.",
+                                    "guidance": "Displace fossil fuel use.",
+                                    "data_unit": "Giga Joule"
+                                }
+                            }
+                        },
+                        "7.3": {
+                            "target_id": "7.3",
+                            "target_text": "7.3 Double rate of energy efficiency improvement",
+                            "indicators": {
+                                "7.3.i1": {
+                                    "indicator_id": "7.3.i1",
+                                    "indicator_text": "Total energy savings",
+                                    "description": "Total energy savings achieved by the project.",
+                                    "guidance": "Units \u00d7 (baseline \u2212 project consumption).",
+                                    "data_unit": "Tera Joule or other units"
+                                }
+                            }
+                        }
+                    }
+                },
+                "8": {
+                    "sdg_id": "8",
+                    "sdg_name": "Decent work and economic growth",
+                    "targets": {
+                        "8.5": {
+                            "target_id": "8.5",
+                            "target_text": "8.5 Achieve full and productive employment",
+                            "indicators": {
+                                "8.5.i1": {
+                                    "indicator_id": "8.5.i1",
+                                    "indicator_text": "8.5.1 Average hourly earnings of employees",
+                                    "description": "Mean hourly earnings by sex and occupation.",
+                                    "guidance": "Can calculate gender pay gap.",
+                                    "data_unit": null
+                                },
+                                "8.5.i2": {
+                                    "indicator_id": "8.5.i2",
+                                    "indicator_text": "Total Number of employees paid living wage",
+                                    "description": "Employees paid living wage.",
+                                    "guidance": "Follow Anker methodology.",
+                                    "data_unit": "USD or local currency per month"
+                                },
+                                "8.5.i3": {
+                                    "indicator_id": "8.5.i3",
+                                    "indicator_text": "Total number of employees earning above local minimum wage",
+                                    "description": "Employees earning above local minimum wage.",
+                                    "guidance": "Provide minimum wage source.",
+                                    "data_unit": "Number"
+                                },
+                                "8.5.i4": {
+                                    "indicator_id": "8.5.i4",
+                                    "indicator_text": "Total number of jobs",
+                                    "description": "Total jobs generated by project.",
+                                    "guidance": "Disclose by contract and gender.",
+                                    "data_unit": "Number"
+                                }
+                            }
+                        }
+                    }
+                },
+                "11": {
+                    "sdg_id": "11",
+                    "sdg_name": "Sustainable cities and communities",
+                    "targets": {
+                        "11.1": {
+                            "target_id": "11.1",
+                            "target_text": "11.1 Ensure access to housing and services",
+                            "indicators": {
+                                "11.1.i1": {
+                                    "indicator_id": "11.1.i1",
+                                    "indicator_text": "Number of unique households (HHs) that benefitted from urban development solutions",
+                                    "description": null,
+                                    "guidance": "HH(UD) calculation method.",
+                                    "data_unit": "Number of households"
+                                },
+                                "11.1.i2": {
+                                    "indicator_id": "11.1.i2",
+                                    "indicator_text": "Number of unique households (HHs) that received off grid Renewable energy services",
+                                    "description": null,
+                                    "guidance": "HH(WM) calculation method.",
+                                    "data_unit": "Number of households"
+                                },
+                                "11.1.i3": {
+                                    "indicator_id": "11.1.i3",
+                                    "indicator_text": "Number of unique households (HHs) that received on grid Renewable energy services",
+                                    "description": null,
+                                    "guidance": "HH(RE) calculation method.",
+                                    "data_unit": "Number of households"
+                                }
+                            }
+                        }
+                    }
+                },
+                "12": {
+                    "sdg_id": "12",
+                    "sdg_name": "Responsible consumption and production",
+                    "targets": {
+                        "12.2": {
+                            "target_id": "12.2",
+                            "target_text": "12.2 Sustainable resource management",
+                            "indicators": {
+                                "12.2.i1": {
+                                    "indicator_id": "12.2.i1",
+                                    "indicator_text": "12.2.1 Material footprint, material footprint per capita, and material footprint per GDP",
+                                    "description": "NA",
+                                    "guidance": "NA",
+                                    "data_unit": "NA"
+                                }
+                            }
+                        },
+                        "12.a": {
+                            "target_id": "12.a",
+                            "target_text": "12.a Support developing countries",
+                            "indicators": {
+                                "12.a.i1": {
+                                    "indicator_id": "12.a.i1",
+                                    "indicator_text": "12.a.1 Installed Renewable energy-generating capacity in developing countries",
+                                    "description": null,
+                                    "guidance": null,
+                                    "data_unit": null
+                                }
+                            }
+                        }
+                    }
+                },
+                "13": {
+                    "sdg_id": "13",
+                    "sdg_name": "Climate action",
+                    "targets": {
+                        "13.2": {
+                            "target_id": "13.2",
+                            "target_text": "13.2 Integrate climate change measures into policies",
+                            "indicators": {
+                                "13.2.i1": {
+                                    "indicator_id": "13.2.i1",
+                                    "indicator_text": "Amount of GHGs emissions avoided or sequestered",
+                                    "description": "Total GHG emissions avoided or sequestered.",
+                                    "guidance": "Use validated GHG methodology.",
+                                    "data_unit": "tCO2eq"
+                                }
+                            }
+                        }
+                    }
+                },
+                "15": {
+                    "sdg_id": "15",
+                    "sdg_name": "Life on land",
+                    "targets": {
+                        "15.1": {
+                            "target_id": "15.1",
+                            "target_text": "15.1 Ensure conservation of terrestrial ecosystems",
+                            "indicators": {
+                                "15.1.i1": {
+                                    "indicator_id": "15.1.i1",
+                                    "indicator_text": "Total non-Renewable wood fuel saved",
+                                    "description": "Total non-Renewable wood fuel saved.",
+                                    "guidance": "Adjust for non-Renewable biomass fraction.",
+                                    "data_unit": "tonnes/ year"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
