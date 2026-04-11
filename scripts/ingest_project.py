@@ -4,8 +4,9 @@ import argparse
 import json
 import requests
 import time
+import asyncio
 from pathlib import Path
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -20,6 +21,7 @@ from scripts.utils import setup_logger
 # =========================================================
 def log_step(logger, msg):
     logger.info(f"⏱️ {msg} | {time.strftime('%H:%M:%S')}")
+
 
 # =========================================================
 # 🔥 METADATA FETCH
@@ -69,15 +71,17 @@ def fetch_verra_metadata(pid: str, logger: Logger):
         logger.error(f"[{pid}] ❌ Metadata fetch failed: {e}")
         return None, []
 
+
 # =========================================================
 # 🔥 SAVE METADATA
 # =========================================================
-def save_metadata(pid: str, metadata: dict, logger: Logger):
+def save_metadata(pid: str, metadata: dict):
     out_dir = Path("outputs") / pid
     out_dir.mkdir(parents=True, exist_ok=True)
 
     with open(out_dir / "metadata.json", "w") as f:
         json.dump(metadata, f, indent=2)
+
 
 # =========================================================
 # 🔥 EXTRACT DOCUMENTS
@@ -94,106 +98,91 @@ def extract_documents(document_groups):
             })
     return docs
 
+
 # =========================================================
-# 🔥 SMART DOCUMENT FILTERING
+# 🔥 SMART FILTER
 # =========================================================
 def classify_doc(doc):
-    name = (doc.get("documentName") or "").lower()
-    dtype = (doc.get("documentType") or "").lower()
-
-    text = name + " " + dtype
+    text = ((doc.get("documentName") or "") + " " +
+            (doc.get("documentType") or "")).lower()
 
     if any(k in text for k in ["monitor", "monit", "mr"]):
         return "monitoring"
-
     if any(k in text for k in ["verif", "verification", "vr"]):
         return "verification"
-
-    if any(k in text for k in ["proj_desc", "project description", "pdd"]):
+    if any(k in text for k in ["proj", "description", "pdd"]):
         return "description"
-
-    if any(k in text for k in ["valid", "validation"]):
+    if any(k in text for k in ["valid"]):
         return "validation"
 
     return "other"
 
+
 def is_noise(doc):
     name = (doc.get("documentName") or "").lower()
+    return any(k in name for k in ["draft", "summary", "kml", "agreement", "annex"])
 
-    bad_keywords = [
-        "draft", "summary", "kml", "agreement",
-        "annex", "communication", "template"
-    ]
-
-    return any(k in name for k in bad_keywords)
 
 def clean_and_group_docs(docs):
-    grouped = {
-        "monitoring": [],
-        "verification": [],
-        "description": [],
-        "validation": []
-    }
+    grouped = {"monitoring": [], "verification": [], "description": [], "validation": []}
 
     for d in docs:
         if is_noise(d):
             continue
 
-        category = classify_doc(d)
-
-        if category in grouped:
-            grouped[category].append(d)
+        cat = classify_doc(d)
+        if cat in grouped:
+            grouped[cat].append(d)
 
     return grouped
+
 
 # =========================================================
 # 🔥 PICK BEST DOCS
 # =========================================================
-def pick_best_docs(grouped, logger):
+def pick_best_docs(grouped):
     selected = []
 
-    def pick_latest(docs):
+    def latest(docs):
         if not docs:
             return None
         return sorted(docs, key=lambda x: x.get("uploadDate", ""), reverse=True)[0]
 
-    # Always prioritize these
     for key in ["monitoring", "verification", "description", "validation"]:
-        doc = pick_latest(grouped[key])
+        doc = latest(grouped[key])
         if doc:
             selected.append(doc)
 
-    logger.info(f"📄 Selected {len(selected)} high-quality documents")
-
     return selected[:5]
+
 
 # =========================================================
 # 🔥 DOWNLOAD PDFs
 # =========================================================
-def download_documents(pid: str, docs, logger: Logger):
+async def download_documents(pid, docs, send_update):
     pdf_dir = Path("pdfs") / pid
     pdf_dir.mkdir(parents=True, exist_ok=True)
 
-    for d in docs:
+    for i, d in enumerate(docs, 1):
+        filename = d["documentName"]
+
+        await send_update(pid, f"Downloading {i}/{len(docs)}: {filename}")
+
         try:
-            url = d["uri"]
-            filename = d["documentName"]
-
-            logger.info(f"[{pid}] ⬇️ {filename}")
-
-            res = requests.get(url, timeout=60)
+            res = requests.get(d["uri"], timeout=60)
             res.raise_for_status()
 
             with open(pdf_dir / filename, "wb") as f:
                 f.write(res.content)
 
         except Exception as e:
-            logger.error(f"[{pid}] ❌ Download failed: {e}")
+            print(f"[{pid}] ❌ Download failed: {e}")
+
 
 # =========================================================
 # 🔥 PROCESS FILE
 # =========================================================
-def process_file(filename: str, pid: str, pipeline: IngestionPipeline, logger: Logger):
+def process_file(filename, pid, pipeline):
     try:
         document = pipeline.ingest(pid=pid, filename=filename)
 
@@ -209,14 +198,14 @@ def process_file(filename: str, pid: str, pipeline: IngestionPipeline, logger: L
             for i, page in enumerate(document.pages)
         ]
 
-    except Exception as e:
-        logger.error(f"[{pid}] ❌ Failed on {filename}: {e}")
+    except Exception:
         return []
 
+
 # =========================================================
-# 🔥 MAIN PROCESS
+# 🔥 MAIN PIPELINE (REAL-TIME)
 # =========================================================
-def process_project(base_path: Path, proj: str, workers: int, logger: Logger, store):
+async def process_project_with_progress(base_path, proj, workers, logger, store, send_update):
 
     log_step(logger, f"[{proj}] 🚀 START")
 
@@ -225,46 +214,63 @@ def process_project(base_path: Path, proj: str, workers: int, logger: Logger, st
 
     pipeline = IngestionPipeline(pdf_base_path=str(project_path))
 
+    # 🔥 METADATA
+    await send_update(proj, "Fetching metadata")
     metadata, document_groups = fetch_verra_metadata(proj, logger)
 
-    if metadata:
-        save_metadata(proj, metadata, logger)
+    await send_update(proj, "Metadata fetched")
 
-    pdf_files = [f for f in os.listdir(project_path) if f.lower().endswith(".pdf")]
+    if metadata:
+        save_metadata(proj, metadata)
+
+    # 🔥 CHECK PDFs
+    pdf_files = [f for f in os.listdir(project_path) if f.endswith(".pdf")]
 
     if not pdf_files:
-        logger.info(f"[{proj}] No PDFs → smart selecting + downloading")
+        await send_update(proj, "Selecting best documents")
 
         docs = extract_documents(document_groups)
         grouped = clean_and_group_docs(docs)
-        selected = pick_best_docs(grouped, logger)
+        selected = pick_best_docs(grouped)
 
-        download_documents(proj, selected, logger)
+        await send_update(proj, f"Downloading {len(selected)} PDFs")
+        await download_documents(proj, selected, send_update)
 
-        pdf_files = [f for f in os.listdir(project_path) if f.lower().endswith(".pdf")]
+        pdf_files = [f for f in os.listdir(project_path) if f.endswith(".pdf")]
 
-    logger.info(f"[{proj}] PDFs found: {len(pdf_files)}")
+    # 🔥 PROCESSING
+    await send_update(proj, f"Processing {len(pdf_files)} PDFs")
 
     all_docs = []
+    loop = asyncio.get_event_loop()
 
     with ThreadPoolExecutor(max_workers=workers) as executor:
-        futures = [
-            executor.submit(process_file, f, proj, pipeline, logger)
+        tasks = [
+            loop.run_in_executor(executor, process_file, f, proj, pipeline)
             for f in pdf_files
         ]
 
-        for future in as_completed(futures):
-            all_docs.extend(future.result())
+        for i, future in enumerate(asyncio.as_completed(tasks), 1):
+            result = await future
+            all_docs.extend(result)
 
-    logger.info(f"[{proj}] Total chunks: {len(all_docs)}")
+            await send_update(proj, f"Processed {i}/{len(pdf_files)} PDFs")
+
+    await send_update(proj, f"Extracted {len(all_docs)} chunks")
+
+    # 🔥 EMBEDDING
+    await send_update(proj, "Generating embeddings")
 
     if all_docs:
         store.insert_documents(all_docs)
 
+    await send_update(proj, "Stored in vector database")
+
     log_step(logger, f"[{proj}] ✅ DONE")
 
+
 # =========================================================
-# 🔥 MAIN
+# 🔥 CLI (UNCHANGED)
 # =========================================================
 def main():
     parser = argparse.ArgumentParser(description="Single project ingest")
@@ -277,22 +283,22 @@ def main():
     args = parser.parse_args()
     logger = setup_logger("IngestProject")
 
-    log_step(logger, "🚀 Script started")
-
     embedding_model = EmbeddingFactory.create("nomic", batch_size=args.batch_size)
 
     vector_store = VectorStore(embedding_model)
     vector_store.initialize(args.reset, model="nomic", collection="nomic")
 
-    process_project(
-        Path(args.path),
-        args.project,
-        args.workers,
-        logger,
-        vector_store
+    asyncio.run(
+        process_project_with_progress(
+            Path(args.path),
+            args.project,
+            args.workers,
+            logger,
+            vector_store,
+            lambda pid, msg: print(f"[{pid}] {msg}")
+        )
     )
 
-    logger.info("🎉 Done")
 
 if __name__ == "__main__":
     main()
