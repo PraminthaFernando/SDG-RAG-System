@@ -83,7 +83,7 @@ def get_project_score(project_id: str):
 
 
 # =========================================================
-# 🔥 WEBSOCKET MANAGER (IMPROVED)
+# 🔥 WEBSOCKET MANAGER
 # =========================================================
 connections = {}  # project_id -> list[WebSocket]
 
@@ -103,7 +103,6 @@ async def send_update(project_id: str, step: str, status: str = "running"):
         except:
             dead_connections.append(ws)
 
-    # cleanup dead sockets
     for ws in dead_connections:
         connections[project_id].remove(ws)
 
@@ -124,14 +123,14 @@ async def websocket_endpoint(websocket: WebSocket, project_id: str):
 
     try:
         while True:
-            await websocket.receive_text()  # keep alive
+            await websocket.receive_text()
     except WebSocketDisconnect:
         print(f"❌ WebSocket disconnected: {project_id}")
         connections[project_id].remove(websocket)
 
 
 # =========================================================
-# 🔥 START INGESTION (REAL-TIME PIPELINE)
+# 🔥 START FULL PIPELINE (INGEST + LLM)
 # =========================================================
 @app.post("/project/{project_id}/start")
 async def start_ingestion(project_id: str, background_tasks: BackgroundTasks):
@@ -146,22 +145,21 @@ async def start_ingestion(project_id: str, background_tasks: BackgroundTasks):
 
                 logger = setup_logger("API-Ingest")
 
-                # STEP 1
+                # =========================
+                # 🔥 INGEST PART (UNCHANGED)
+                # =========================
                 await send_update(project_id, "🚀 Initializing system")
                 await send_update(project_id, "Loading embedding model")
                 embedding_model = EmbeddingFactory.create("nomic", batch_size=32)
 
-                # STEP 2
                 await send_update(project_id, "Connecting to vector database")
                 store = VectorStore(embedding_model)
                 store.initialize(False, model="nomic", collection="nomic")
 
-                # STEP 3
                 await send_update(project_id, "Starting ingestion pipeline")
 
                 base_path = Path("pdfs")
 
-                # RUN PIPELINE
                 await process_project_with_progress(
                     base_path,
                     project_id,
@@ -171,16 +169,29 @@ async def start_ingestion(project_id: str, background_tasks: BackgroundTasks):
                     send_update
                 )
 
-                # DONE
-                await send_update(project_id, "✅ Completed", "done")
+                # =========================
+                # 🔥 NEW: LLM + SCORING
+                # =========================
+                from scripts.run_agent import run_agent_with_progress
+
+                await send_update(project_id, "🚀 Starting SDG analysis")
+
+                await run_agent_with_progress(
+                    project_id=project_id,
+                    output_path="outputs",
+                    embedding="nomic",
+                    send_update=send_update
+                )
+
+                # FINAL
+                await send_update(project_id, "🎉 Full pipeline completed", "done")
 
             except Exception as e:
                 await send_update(project_id, f"❌ Error: {str(e)}", "failed")
 
-        # run async in background
         asyncio.create_task(run_pipeline())
 
-        return {"message": f"Ingestion started for {project_id}"}
+        return {"message": f"Pipeline started for {project_id}"}
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

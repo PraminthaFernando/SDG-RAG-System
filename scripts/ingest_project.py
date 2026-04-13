@@ -153,7 +153,7 @@ def pick_best_docs(grouped):
         if doc:
             selected.append(doc)
 
-    return selected[:5]
+    return selected[:1]
 
 
 # =========================================================
