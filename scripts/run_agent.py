@@ -201,10 +201,7 @@ async def run_agent_with_progress(project_id, output_path, embedding, send_updat
 
     structured = normalize_single_project(results, master)
 
-    structured_file = proj_path / "structured_sdg_results.json"
 
-    with open(structured_file, "w", encoding="utf-8") as f:
-        json.dump(structured, f, indent=4)
 
     # ---------------------------------
     # SCORING (UPDATED)

@@ -5,9 +5,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi import BackgroundTasks
 import asyncio
 
-# 🔥 NEW DB IMPORTS
+# 🔥 DB IMPORTS
 from RDS.database import SessionLocal
-from RDS.crud_metadata import get_metadata
+from RDS.crud_metadata import get_metadata   # ✅ FIXED
+from RDS.crud_score import get_project_score as get_score_from_db
 
 app = FastAPI()
 
@@ -33,32 +34,18 @@ def root():
 
 
 # =========================================================
-# 🔥 METADATA FROM RDS (UPDATED)
+# 🔥 METADATA FROM DB (FIXED)
 # =========================================================
 @app.get("/project/{project_id}")
 def get_project_metadata(project_id: str):
     db = SessionLocal()
     try:
-        result = get_metadata(db, project_id)
+        result = get_metadata(db, project_id)  # ✅ FIXED
 
         if not result:
             raise HTTPException(status_code=404, detail="Project not found")
 
-        return {
-            "project_id": result.project_id,
-            "project_name": result.project_name,
-            "description": result.description,
-            "latitude": result.latitude,
-            "longitude": result.longitude,
-            "state_province": result.state_province,
-            "project_status": result.project_status,
-            "annual_emission_reduction": result.annual_emission_reduction,
-            "buffer_pool_credits": result.buffer_pool_credits,
-            "project_category": result.project_category,
-            "project_subcategory": result.project_subcategory,
-            "registration_date": result.registration_date,
-            "crediting_period": result.crediting_period,
-        }
+        return result  # ✅ already dict
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -68,7 +55,7 @@ def get_project_metadata(project_id: str):
 
 
 # =========================================================
-# 🔥 LLM RESULTS (UNCHANGED - FILE BASED)
+# 🔥 LLM RESULTS (FILE BASED - UNCHANGED)
 # =========================================================
 @app.get("/project/{project_id}/llm")
 def get_project_llm(project_id: str):
@@ -88,23 +75,24 @@ def get_project_llm(project_id: str):
 
 
 # =========================================================
-# 🔥 SCORE RESULTS (UNCHANGED - FILE BASED)
+# 🔥 SCORE FROM DB (UNCHANGED)
 # =========================================================
 @app.get("/project/{project_id}/score")
 def get_project_score(project_id: str):
+    db = SessionLocal()
     try:
-        file_path = BASE_OUTPUT_DIR / project_id / "project_impact_score.json"
+        result = get_score_from_db(db, project_id)
 
-        if not file_path.exists():
-            raise HTTPException(status_code=404, detail="score results not found")
+        if not result:
+            raise HTTPException(status_code=404, detail="Score not found")
 
-        with open(file_path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-
-        return data
+        return result
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+    finally:
+        db.close()
 
 
 # =========================================================
@@ -215,3 +203,42 @@ async def start_ingestion(project_id: str, background_tasks: BackgroundTasks):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
+
+    # =========================================================
+# 🔥 LIST VERRA PROJECTS (NEW)
+# =========================================================
+from sqlalchemy import text
+
+@app.get("/projects/verra")
+def list_verra_projects():
+    db = SessionLocal()
+    try:
+        result = db.execute(text("""
+            SELECT 
+                project_id,
+                project_name,
+                project_status,
+                project_category,
+                annual_emission_reduction
+            FROM verra_metadata
+            ORDER BY created_at DESC
+        """))
+
+        rows = result.mappings().all()  # ✅ important
+
+        return [
+            {
+                "id": r["project_id"],
+                "name": r["project_name"],
+                "status": r["project_status"],
+                "category": r["project_category"],
+                "credits": r["annual_emission_reduction"]
+            }
+            for r in rows
+        ]
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        db.close()
