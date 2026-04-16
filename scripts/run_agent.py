@@ -206,7 +206,9 @@ async def run_agent_with_progress(project_id, output_path, embedding, send_updat
     with open(structured_file, "w", encoding="utf-8") as f:
         json.dump(structured, f, indent=4)
 
-    # SCORING
+    # ---------------------------------
+    # SCORING (UPDATED)
+    # ---------------------------------
     await send_update(project_id, "Calculating final score")
 
     project_data = structured
@@ -259,16 +261,26 @@ async def run_agent_with_progress(project_id, output_path, embedding, send_updat
         "sdgs": output_sdgs
     }
 
-    final_file = proj_path / "project_impact_score.json"
+    # =========================================================
+    # 🔥 SAVE TO DATABASE (ONLY — NO FILE)
+    # =========================================================
+    await send_update(project_id, "Saving score to database")
 
-    with open(final_file, "w", encoding="utf-8") as f:
-        json.dump(final_output, f, indent=4)
+    from RDS.database import SessionLocal
+    from RDS.crud_score import upsert_full_score
+
+    db = SessionLocal()
+    try:
+        upsert_full_score(db, project_id, final_output)
+    finally:
+        db.close()
 
     await send_update(project_id, "Final score saved")
 
+    # =========================================================
+    # 🔥 DONE
+    # =========================================================
     await send_update(project_id, "SDG analysis completed", "done")
-
-
 # ---------------------------------
 # CLI (UNCHANGED)
 # ---------------------------------
@@ -281,45 +293,19 @@ def main():
 
     args = parser.parse_args()
 
-    retrieval_service = RetrievalService(
-        mode="hybrid",
-        use_reranker=True,
-        model=args.embedding,
-        collection="nomic"
+    # 🔥 Console progress (replaces WebSocket)
+    async def console_update(pid, msg, status="running"):
+        print(f"[{pid}] {msg}")
+
+    # 🔥 Run FULL pipeline (LLM + normalize + score + DB)
+    asyncio.run(
+        run_agent_with_progress(
+            project_id=args.project,
+            output_path=args.o_p,
+            embedding=args.embedding,
+            send_update=console_update
+        )
     )
-
-    retriev_policy_service = RetrievalService(
-        mode="hybrid",
-        use_reranker=True,
-        model=args.embedding,
-        collection="policy_docs"
-    )
-
-    rebuild_master_criteria(
-        input_file_name="sdg_master_criteria.json",
-        output_file_name="sector_master_criteria.json"
-    )
-
-    master_path = Path("scoring/criteria/sector_master_criteria.json")
-
-    with open(master_path, "r", encoding="utf-8") as f:
-        master = json.load(f)
-
-    proj = args.project
-
-    results = run_pipeline(
-        pid=proj,
-        retrieval_service=retrieval_service,
-        retriev_policy_service=retriev_policy_service
-    )
-
-    proj_path = Path(args.o_p) / proj
-    proj_path.mkdir(parents=True, exist_ok=True)
-
-    llm_file = proj_path / f"{args.embedding}_sdg_prototype_llm_results.json"
-
-    with open(llm_file, "w", encoding="utf-8") as f:
-        json.dump(results, f, indent=4)
 
 
 if __name__ == "__main__":

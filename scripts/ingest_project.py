@@ -16,6 +16,10 @@ from embeddings.embedding_factory import EmbeddingFactory
 from vectordb.vector_store import VectorStore
 from scripts.utils import setup_logger
 
+# 🔥 NEW DB IMPORTS
+from RDS.database import SessionLocal
+from RDS.crud_metadata import upsert_metadata
+
 # =========================================================
 # 🔥 HELPER LOG
 # =========================================================
@@ -73,18 +77,7 @@ def fetch_verra_metadata(pid: str, logger: Logger):
 
 
 # =========================================================
-# 🔥 SAVE METADATA
-# =========================================================
-def save_metadata(pid: str, metadata: dict):
-    out_dir = Path("outputs") / pid
-    out_dir.mkdir(parents=True, exist_ok=True)
-
-    with open(out_dir / "metadata.json", "w") as f:
-        json.dump(metadata, f, indent=2)
-
-
-# =========================================================
-# 🔥 EXTRACT DOCUMENTS
+# 🔥 EXTRACT DOCUMENTS (UNCHANGED)
 # =========================================================
 def extract_documents(document_groups):
     docs = []
@@ -100,7 +93,7 @@ def extract_documents(document_groups):
 
 
 # =========================================================
-# 🔥 SMART FILTER
+# 🔥 SMART FILTER (UNCHANGED)
 # =========================================================
 def classify_doc(doc):
     text = ((doc.get("documentName") or "") + " " +
@@ -138,7 +131,7 @@ def clean_and_group_docs(docs):
 
 
 # =========================================================
-# 🔥 PICK BEST DOCS
+# 🔥 PICK BEST DOCS (UNCHANGED)
 # =========================================================
 def pick_best_docs(grouped):
     selected = []
@@ -157,7 +150,7 @@ def pick_best_docs(grouped):
 
 
 # =========================================================
-# 🔥 DOWNLOAD PDFs
+# 🔥 DOWNLOAD PDFs (UNCHANGED)
 # =========================================================
 async def download_documents(pid, docs, send_update):
     pdf_dir = Path("pdfs") / pid
@@ -180,7 +173,7 @@ async def download_documents(pid, docs, send_update):
 
 
 # =========================================================
-# 🔥 PROCESS FILE
+# 🔥 PROCESS FILE (UNCHANGED)
 # =========================================================
 def process_file(filename, pid, pipeline):
     try:
@@ -203,7 +196,7 @@ def process_file(filename, pid, pipeline):
 
 
 # =========================================================
-# 🔥 MAIN PIPELINE (REAL-TIME)
+# 🔥 MAIN PIPELINE (UPDATED HERE)
 # =========================================================
 async def process_project_with_progress(base_path, proj, workers, logger, store, send_update):
 
@@ -220,8 +213,15 @@ async def process_project_with_progress(base_path, proj, workers, logger, store,
 
     await send_update(proj, "Metadata fetched")
 
+    # 🔥 SAVE TO DATABASE (NEW)
     if metadata:
-        save_metadata(proj, metadata)
+        metadata["project_id"] = f"VCS_{metadata['project_id']}"
+
+        db = SessionLocal()
+        try:
+            upsert_metadata(db, metadata)
+        finally:
+            db.close()
 
     # 🔥 CHECK PDFs
     pdf_files = [f for f in os.listdir(project_path) if f.endswith(".pdf")]
@@ -269,36 +269,31 @@ async def process_project_with_progress(base_path, proj, workers, logger, store,
     log_step(logger, f"[{proj}] ✅ DONE")
 
 
-# =========================================================
-# 🔥 CLI (UNCHANGED)
-# =========================================================
-def main():
-    parser = argparse.ArgumentParser(description="Single project ingest")
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
     parser.add_argument("--path", required=True)
     parser.add_argument("--project", required=True)
-    parser.add_argument("--batch_size", type=int, default=32)
     parser.add_argument("--workers", type=int, default=2)
-    parser.add_argument("--reset", action="store_true")
 
     args = parser.parse_args()
-    logger = setup_logger("IngestProject")
 
-    embedding_model = EmbeddingFactory.create("nomic", batch_size=args.batch_size)
+    logger = setup_logger("ingestion")
+    base_path = Path(args.path)
 
-    vector_store = VectorStore(embedding_model)
-    vector_store.initialize(args.reset, model="nomic", collection="nomic")
+    # ✅ USE SAME MODEL AS FASTAPI
+    embedding = EmbeddingFactory.create("nomic", batch_size=32)
+    store = VectorStore(embedding)
+
+    async def send_update(pid, msg):
+        print(f"[{pid}] {msg}")
 
     asyncio.run(
         process_project_with_progress(
-            Path(args.path),
-            args.project,
-            args.workers,
-            logger,
-            vector_store,
-            lambda pid, msg: print(f"[{pid}] {msg}")
+            base_path=base_path,
+            proj=args.project,
+            workers=args.workers,
+            logger=logger,
+            store=store,
+            send_update=send_update
         )
     )
-
-
-if __name__ == "__main__":
-    main()

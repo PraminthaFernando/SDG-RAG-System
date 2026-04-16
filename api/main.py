@@ -5,6 +5,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi import BackgroundTasks
 import asyncio
 
+# 🔥 NEW DB IMPORTS
+from RDS.database import SessionLocal
+from RDS.crud_metadata import get_metadata
+
 app = FastAPI()
 
 # =========================================================
@@ -29,25 +33,43 @@ def root():
 
 
 # =========================================================
-# 🔥 EXISTING ENDPOINTS (UNCHANGED)
+# 🔥 METADATA FROM RDS (UPDATED)
 # =========================================================
 @app.get("/project/{project_id}")
 def get_project_metadata(project_id: str):
+    db = SessionLocal()
     try:
-        file_path = BASE_OUTPUT_DIR / project_id / "metadata.json"
+        result = get_metadata(db, project_id)
 
-        if not file_path.exists():
+        if not result:
             raise HTTPException(status_code=404, detail="Project not found")
 
-        with open(file_path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-
-        return data
+        return {
+            "project_id": result.project_id,
+            "project_name": result.project_name,
+            "description": result.description,
+            "latitude": result.latitude,
+            "longitude": result.longitude,
+            "state_province": result.state_province,
+            "project_status": result.project_status,
+            "annual_emission_reduction": result.annual_emission_reduction,
+            "buffer_pool_credits": result.buffer_pool_credits,
+            "project_category": result.project_category,
+            "project_subcategory": result.project_subcategory,
+            "registration_date": result.registration_date,
+            "crediting_period": result.crediting_period,
+        }
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+    finally:
+        db.close()
 
+
+# =========================================================
+# 🔥 LLM RESULTS (UNCHANGED - FILE BASED)
+# =========================================================
 @app.get("/project/{project_id}/llm")
 def get_project_llm(project_id: str):
     try:
@@ -65,6 +87,9 @@ def get_project_llm(project_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# =========================================================
+# 🔥 SCORE RESULTS (UNCHANGED - FILE BASED)
+# =========================================================
 @app.get("/project/{project_id}/score")
 def get_project_score(project_id: str):
     try:
@@ -130,7 +155,7 @@ async def websocket_endpoint(websocket: WebSocket, project_id: str):
 
 
 # =========================================================
-# 🔥 START FULL PIPELINE (INGEST + LLM)
+# 🔥 START FULL PIPELINE (UNCHANGED)
 # =========================================================
 @app.post("/project/{project_id}/start")
 async def start_ingestion(project_id: str, background_tasks: BackgroundTasks):
@@ -145,14 +170,13 @@ async def start_ingestion(project_id: str, background_tasks: BackgroundTasks):
 
                 logger = setup_logger("API-Ingest")
 
-                # =========================
-                # 🔥 INGEST PART (UNCHANGED)
-                # =========================
                 await send_update(project_id, "🚀 Initializing system")
                 await send_update(project_id, "Loading embedding model")
+
                 embedding_model = EmbeddingFactory.create("nomic", batch_size=32)
 
                 await send_update(project_id, "Connecting to vector database")
+
                 store = VectorStore(embedding_model)
                 store.initialize(False, model="nomic", collection="nomic")
 
@@ -169,9 +193,6 @@ async def start_ingestion(project_id: str, background_tasks: BackgroundTasks):
                     send_update
                 )
 
-                # =========================
-                # 🔥 NEW: LLM + SCORING
-                # =========================
                 from scripts.run_agent import run_agent_with_progress
 
                 await send_update(project_id, "🚀 Starting SDG analysis")
@@ -183,7 +204,6 @@ async def start_ingestion(project_id: str, background_tasks: BackgroundTasks):
                     send_update=send_update
                 )
 
-                # FINAL
                 await send_update(project_id, "🎉 Full pipeline completed", "done")
 
             except Exception as e:
