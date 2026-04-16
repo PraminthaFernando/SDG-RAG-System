@@ -36,3 +36,20 @@ CREATE TABLE project_sdg_scores (
 
     UNIQUE(project_id, sdg)
 );
+
+CREATE TABLE project_documents (
+    id SERIAL PRIMARY KEY,
+    project_id TEXT,
+    document_name TEXT,
+    document_type TEXT,
+    uri TEXT,
+    upload_date TEXT
+);
+
+CREATE TABLE project_llm_results (
+    project_id TEXT PRIMARY KEY,
+    llm_result JSONB NOT NULL,
+
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);

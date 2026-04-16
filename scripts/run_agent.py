@@ -1,6 +1,5 @@
 import json
 import argparse
-import time
 import asyncio
 from pathlib import Path
 
@@ -14,9 +13,9 @@ from scoring.modules.rebuild_master import rebuild_master_criteria
 from scoring.modules.normalize_projects import normalize as normalize_text
 
 
-# ---------------------------------
+# =========================================================
 # NORMALIZATION (UNCHANGED)
-# ---------------------------------
+# =========================================================
 def normalize_single_project(llm_data, master, sector="forestry"):
 
     result = {}
@@ -80,12 +79,13 @@ def normalize_single_project(llm_data, master, sector="forestry"):
     return {"sdgs": result}
 
 
-# ---------------------------------
-# LLM PIPELINE WITH PROGRESS
-# ---------------------------------
+# =========================================================
+# LLM PIPELINE
+# =========================================================
 def run_pipeline(pid, retrieval_service, retriev_policy_service, progress_callback=None):
 
     client = GroqLLMClient()
+
     pipeline = QueryTransformationPipeline(
         retrieval_service=retrieval_service,
         llm_client=client,
@@ -97,14 +97,12 @@ def run_pipeline(pid, retrieval_service, retriev_policy_service, progress_callba
 
     for i, target in enumerate(SDG_TARGETS_V2["indicator_mappings"], start=1):
 
-        # 🔥 SEND PROGRESS
         if progress_callback:
             progress_callback(i, total, target["Indicator"])
 
         sdg_goal = target["SDG"]
 
-        if sdg_goal not in final_output:
-            final_output[sdg_goal] = []
+        final_output.setdefault(sdg_goal, [])
 
         description = f"""
 SDG goal: {sdg_goal}
@@ -128,14 +126,13 @@ Data Unit: {target['Data Unit']}
     return final_output
 
 
-# ---------------------------------
-# 🔥 ASYNC PIPELINE WITH CLEAN TRACKING
-# ---------------------------------
-async def run_agent_with_progress(project_id, output_path, embedding, send_update):
+# =========================================================
+# MAIN PIPELINE
+# =========================================================
+async def run_agent_with_progress(project_id, embedding, send_update):
 
     logger = setup_logger("SDG Agent")
 
-    # 🔥 CLEAN START
     await send_update(project_id, "Starting SDG analysis")
 
     retrieval_service = RetrievalService(
@@ -152,7 +149,6 @@ async def run_agent_with_progress(project_id, output_path, embedding, send_updat
         collection="policy_docs"
     )
 
-    # MASTER (no noisy logs)
     rebuild_master_criteria(
         input_file_name="sdg_master_criteria.json",
         output_file_name="sector_master_criteria.json"
@@ -167,7 +163,6 @@ async def run_agent_with_progress(project_id, output_path, embedding, send_updat
 
     loop = asyncio.get_event_loop()
 
-    # 🔥 PROGRESS CALLBACK
     def progress_callback(i, total, indicator_name):
         msg = f"Evaluating {i}/{total}: {indicator_name[:60]}"
         asyncio.run_coroutine_threadsafe(
@@ -175,7 +170,7 @@ async def run_agent_with_progress(project_id, output_path, embedding, send_updat
             loop
         )
 
-    # RUN LLM
+    # 🔥 RUN LLM
     results = await loop.run_in_executor(
         None,
         lambda: run_pipeline(
@@ -186,26 +181,32 @@ async def run_agent_with_progress(project_id, output_path, embedding, send_updat
         )
     )
 
-    proj_path = Path(output_path) / project_id
-    proj_path.mkdir(parents=True, exist_ok=True)
+    # =========================================================
+    # 🔥 SAVE LLM TO DB (NEW)
+    # =========================================================
+    await send_update(project_id, "Saving LLM results to database")
 
-    llm_file = proj_path / f"{embedding}_sdg_prototype_llm_results.json"
+    from RDS.database import SessionLocal
+    from RDS.crud_llm import upsert_llm_result
 
-    with open(llm_file, "w", encoding="utf-8") as f:
-        json.dump(results, f, indent=4)
+    db = SessionLocal()
+    try:
+        upsert_llm_result(db, project_id, results)
+    finally:
+        db.close()
 
     await send_update(project_id, "LLM processing completed")
 
-    # NORMALIZE
+    # =========================================================
+    # NORMALIZATION
+    # =========================================================
     await send_update(project_id, "Normalizing results")
 
     structured = normalize_single_project(results, master)
 
-
-
-    # ---------------------------------
-    # SCORING (UPDATED)
-    # ---------------------------------
+    # =========================================================
+    # SCORING
+    # =========================================================
     await send_update(project_id, "Calculating final score")
 
     project_data = structured
@@ -259,11 +260,10 @@ async def run_agent_with_progress(project_id, output_path, embedding, send_updat
     }
 
     # =========================================================
-    # 🔥 SAVE TO DATABASE (ONLY — NO FILE)
+    # 🔥 SAVE SCORE TO DB
     # =========================================================
     await send_update(project_id, "Saving score to database")
 
-    from RDS.database import SessionLocal
     from RDS.crud_score import upsert_full_score
 
     db = SessionLocal()
@@ -273,32 +273,26 @@ async def run_agent_with_progress(project_id, output_path, embedding, send_updat
         db.close()
 
     await send_update(project_id, "Final score saved")
-
-    # =========================================================
-    # 🔥 DONE
-    # =========================================================
     await send_update(project_id, "SDG analysis completed", "done")
-# ---------------------------------
-# CLI (UNCHANGED)
-# ---------------------------------
+
+
+# =========================================================
+# CLI
+# =========================================================
 def main():
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--o_p", type=str, required=True)
     parser.add_argument("--project", type=str, required=True)
     parser.add_argument("--embedding", type=str, default="e5")
 
     args = parser.parse_args()
 
-    # 🔥 Console progress (replaces WebSocket)
     async def console_update(pid, msg, status="running"):
         print(f"[{pid}] {msg}")
 
-    # 🔥 Run FULL pipeline (LLM + normalize + score + DB)
     asyncio.run(
         run_agent_with_progress(
             project_id=args.project,
-            output_path=args.o_p,
             embedding=args.embedding,
             send_update=console_update
         )

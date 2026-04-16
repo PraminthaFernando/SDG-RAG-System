@@ -1,10 +1,10 @@
 from logging import Logger
-import os
 import argparse
-import json
 import requests
 import time
 import asyncio
+import os
+import tempfile
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
 from dotenv import load_dotenv
@@ -16,9 +16,11 @@ from embeddings.embedding_factory import EmbeddingFactory
 from vectordb.vector_store import VectorStore
 from scripts.utils import setup_logger
 
-# 🔥 NEW DB IMPORTS
+# 🔥 DB IMPORTS
 from RDS.database import SessionLocal
 from RDS.crud_metadata import upsert_metadata
+from RDS.crud_docs import replace_project_documents
+
 
 # =========================================================
 # 🔥 HELPER LOG
@@ -54,7 +56,7 @@ def fetch_verra_metadata(pid: str, logger: Logger):
                 return None
 
         metadata = {
-            "project_id": numeric_id,
+            "project_id": pid,
             "project_name": data.get("resourceName") or "",
             "description": data.get("description") or "",
             "latitude": data.get("location", {}).get("latitude"),
@@ -77,7 +79,7 @@ def fetch_verra_metadata(pid: str, logger: Logger):
 
 
 # =========================================================
-# 🔥 EXTRACT DOCUMENTS (UNCHANGED)
+# 🔥 EXTRACT DOCUMENTS
 # =========================================================
 def extract_documents(document_groups):
     docs = []
@@ -93,17 +95,17 @@ def extract_documents(document_groups):
 
 
 # =========================================================
-# 🔥 SMART FILTER (UNCHANGED)
+# 🔥 FILTERING
 # =========================================================
 def classify_doc(doc):
     text = ((doc.get("documentName") or "") + " " +
             (doc.get("documentType") or "")).lower()
 
-    if any(k in text for k in ["monitor", "monit", "mr"]):
+    if any(k in text for k in ["monitor", "mr"]):
         return "monitoring"
-    if any(k in text for k in ["verif", "verification", "vr"]):
+    if any(k in text for k in ["verif", "vr"]):
         return "verification"
-    if any(k in text for k in ["proj", "description", "pdd"]):
+    if any(k in text for k in ["proj", "pdd"]):
         return "description"
     if any(k in text for k in ["valid"]):
         return "validation"
@@ -131,7 +133,7 @@ def clean_and_group_docs(docs):
 
 
 # =========================================================
-# 🔥 PICK BEST DOCS (UNCHANGED)
+# 🔥 PICK BEST DOC
 # =========================================================
 def pick_best_docs(grouped):
     selected = []
@@ -150,34 +152,29 @@ def pick_best_docs(grouped):
 
 
 # =========================================================
-# 🔥 DOWNLOAD PDFs (UNCHANGED)
+# 🔥 BULLETPROOF TEMP PROCESS
 # =========================================================
-async def download_documents(pid, docs, send_update):
-    pdf_dir = Path("pdfs") / pid
-    pdf_dir.mkdir(parents=True, exist_ok=True)
+def process_url_temp(doc, pid, pipeline):
+    tmp_path = None
 
-    for i, d in enumerate(docs, 1):
-        filename = d["documentName"]
-
-        await send_update(pid, f"Downloading {i}/{len(docs)}: {filename}")
-
-        try:
-            res = requests.get(d["uri"], timeout=60)
-            res.raise_for_status()
-
-            with open(pdf_dir / filename, "wb") as f:
-                f.write(res.content)
-
-        except Exception as e:
-            print(f"[{pid}] ❌ Download failed: {e}")
-
-
-# =========================================================
-# 🔥 PROCESS FILE (UNCHANGED)
-# =========================================================
-def process_file(filename, pid, pipeline):
     try:
-        document = pipeline.ingest(pid=pid, filename=filename)
+        url = doc["uri"]
+        filename = doc["documentName"]
+
+        res = requests.get(url, timeout=60)
+        res.raise_for_status()
+
+        tmp_path = os.path.join(
+            tempfile.gettempdir(),
+            f"{pid}_{int(time.time() * 1000)}.pdf"
+        )
+
+        with open(tmp_path, "wb") as f:
+            f.write(res.content)
+
+        time.sleep(0.05)
+
+        document = pipeline.ingest(pid=pid, filename=tmp_path)
 
         return [
             {
@@ -191,74 +188,85 @@ def process_file(filename, pid, pipeline):
             for i, page in enumerate(document.pages)
         ]
 
-    except Exception:
+    except Exception as e:
+        print(f"[{pid}] ❌ Temp processing failed: {e}")
         return []
+
+    finally:
+        if tmp_path and os.path.exists(tmp_path):
+            try:
+                os.remove(tmp_path)
+            except:
+                pass
 
 
 # =========================================================
-# 🔥 MAIN PIPELINE (UPDATED HERE)
+# 🔥 MAIN PIPELINE
 # =========================================================
 async def process_project_with_progress(base_path, proj, workers, logger, store, send_update):
 
     log_step(logger, f"[{proj}] 🚀 START")
 
-    project_path = base_path / proj
-    project_path.mkdir(parents=True, exist_ok=True)
+    pipeline = IngestionPipeline(pdf_base_path=tempfile.gettempdir())
 
-    pipeline = IngestionPipeline(pdf_base_path=str(project_path))
-
-    # 🔥 METADATA
+    # -------------------------
+    # METADATA
+    # -------------------------
     await send_update(proj, "Fetching metadata")
     metadata, document_groups = fetch_verra_metadata(proj, logger)
 
     await send_update(proj, "Metadata fetched")
 
-    # 🔥 SAVE TO DATABASE (NEW)
     if metadata:
-        metadata["project_id"] = f"VCS_{metadata['project_id']}"
-
         db = SessionLocal()
         try:
             upsert_metadata(db, metadata)
         finally:
             db.close()
 
-    # 🔥 CHECK PDFs
-    pdf_files = [f for f in os.listdir(project_path) if f.endswith(".pdf")]
+    # -------------------------
+    # DOCUMENT SELECTION
+    # -------------------------
+    await send_update(proj, "Selecting best documents")
 
-    if not pdf_files:
-        await send_update(proj, "Selecting best documents")
+    docs = extract_documents(document_groups)
+    grouped = clean_and_group_docs(docs)
+    selected = pick_best_docs(grouped)
 
-        docs = extract_documents(document_groups)
-        grouped = clean_and_group_docs(docs)
-        selected = pick_best_docs(grouped)
+    # -------------------------
+    # SAVE DOCS TO DB
+    # -------------------------
+    db = SessionLocal()
+    try:
+        replace_project_documents(db, proj, selected)
+    finally:
+        db.close()
 
-        await send_update(proj, f"Downloading {len(selected)} PDFs")
-        await download_documents(proj, selected, send_update)
-
-        pdf_files = [f for f in os.listdir(project_path) if f.endswith(".pdf")]
-
-    # 🔥 PROCESSING
-    await send_update(proj, f"Processing {len(pdf_files)} PDFs")
+    # -------------------------
+    # PROCESSING
+    # -------------------------
+    await send_update(proj, f"Processing {len(selected)} PDFs")
 
     all_docs = []
     loop = asyncio.get_event_loop()
 
     with ThreadPoolExecutor(max_workers=workers) as executor:
         tasks = [
-            loop.run_in_executor(executor, process_file, f, proj, pipeline)
-            for f in pdf_files
+            loop.run_in_executor(executor, process_url_temp, d, proj, pipeline)
+            for d in selected
         ]
 
         for i, future in enumerate(asyncio.as_completed(tasks), 1):
             result = await future
             all_docs.extend(result)
 
-            await send_update(proj, f"Processed {i}/{len(pdf_files)} PDFs")
+            await send_update(proj, f"Processed {i}/{len(selected)} PDFs")
 
     await send_update(proj, f"Extracted {len(all_docs)} chunks")
 
-    # 🔥 EMBEDDING
+    # -------------------------
+    # EMBEDDING
+    # -------------------------
     await send_update(proj, "Generating embeddings")
 
     if all_docs:
@@ -269,27 +277,34 @@ async def process_project_with_progress(base_path, proj, workers, logger, store,
     log_step(logger, f"[{proj}] ✅ DONE")
 
 
+# =========================================================
+# 🔥 CLI
+# =========================================================
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--path", required=True)
     parser.add_argument("--project", required=True)
     parser.add_argument("--workers", type=int, default=2)
 
     args = parser.parse_args()
 
     logger = setup_logger("ingestion")
-    base_path = Path(args.path)
-
-    # ✅ USE SAME MODEL AS FASTAPI
     embedding = EmbeddingFactory.create("nomic", batch_size=32)
+
     store = VectorStore(embedding)
+
+    # 🔥 THIS IS THE MISSING PIECE
+    store.initialize(
+        reset=False,
+        model="nomic",
+        collection="nomic"
+    )
 
     async def send_update(pid, msg):
         print(f"[{pid}] {msg}")
 
     asyncio.run(
         process_project_with_progress(
-            base_path=base_path,
+            base_path=None,
             proj=args.project,
             workers=args.workers,
             logger=logger,
