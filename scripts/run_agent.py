@@ -12,9 +12,36 @@ from query_transform.pipeline import QueryTransformationPipeline
 from scoring.modules.rebuild_master import rebuild_master_criteria
 from scoring.modules.normalize_projects import normalize as normalize_text
 
+from sqlalchemy import text
+
 
 # =========================================================
-# NORMALIZATION (UNCHANGED)
+# 🔥 FETCH PROJECT SECTOR FROM DB
+# =========================================================
+def get_project_sector(db, project_id: str):
+
+    result = db.execute(
+        text("""
+            SELECT project_category
+            FROM verra_metadata
+            WHERE project_id = :pid
+        """),
+        {"pid": project_id}
+    ).fetchone()
+
+    if not result:
+        return "forestry"  # default fallback
+
+    category = (result[0] or "").lower()
+
+    if "agriculture" in category or "forestry" in category:
+        return "forestry"
+
+    return "renewables"
+
+
+# =========================================================
+# NORMALIZATION
 # =========================================================
 def normalize_single_project(llm_data, master, sector="forestry"):
 
@@ -82,7 +109,7 @@ def normalize_single_project(llm_data, master, sector="forestry"):
 # =========================================================
 # LLM PIPELINE
 # =========================================================
-def run_pipeline(pid, retrieval_service, retriev_policy_service, progress_callback=None):
+def run_pipeline(pid, retrieval_service, retriev_policy_service, sector, progress_callback=None):
 
     client = GroqLLMClient()
 
@@ -92,10 +119,12 @@ def run_pipeline(pid, retrieval_service, retriev_policy_service, progress_callba
         policy_service=retriev_policy_service
     )
 
-    final_output = {}
-    total = len(SDG_TARGETS_V2["indicator_mappings"])
+    mappings = SDG_TARGETS_V2["sectors"][sector]["indicator_mappings"]
 
-    for i, target in enumerate(SDG_TARGETS_V2["indicator_mappings"], start=1):
+    final_output = {}
+    total = len(mappings)
+
+    for i, target in enumerate(mappings, start=1):
 
         if progress_callback:
             progress_callback(i, total, target["Indicator"])
@@ -149,6 +178,22 @@ async def run_agent_with_progress(project_id, embedding, send_update):
         collection="policy_docs"
     )
 
+    # =========================================================
+    # 🔥 GET SECTOR FROM DB
+    # =========================================================
+    from RDS.database import SessionLocal
+
+    db = SessionLocal()
+    try:
+        sector = get_project_sector(db, project_id)
+    finally:
+        db.close()
+
+    await send_update(project_id, f"Detected sector: {sector}")
+
+    # =========================================================
+    # BUILD MASTER
+    # =========================================================
     rebuild_master_criteria(
         input_file_name="sdg_master_criteria.json",
         output_file_name="sector_master_criteria.json"
@@ -170,23 +215,25 @@ async def run_agent_with_progress(project_id, embedding, send_update):
             loop
         )
 
+    # =========================================================
     # 🔥 RUN LLM
+    # =========================================================
     results = await loop.run_in_executor(
         None,
         lambda: run_pipeline(
             pid=project_id,
             retrieval_service=retrieval_service,
             retriev_policy_service=retriev_policy_service,
+            sector=sector,
             progress_callback=progress_callback
         )
     )
 
     # =========================================================
-    # 🔥 SAVE LLM TO DB (NEW)
+    # 🔥 SAVE LLM RESULTS
     # =========================================================
     await send_update(project_id, "Saving LLM results to database")
 
-    from RDS.database import SessionLocal
     from RDS.crud_llm import upsert_llm_result
 
     db = SessionLocal()
@@ -202,7 +249,7 @@ async def run_agent_with_progress(project_id, embedding, send_update):
     # =========================================================
     await send_update(project_id, "Normalizing results")
 
-    structured = normalize_single_project(results, master)
+    structured = normalize_single_project(results, master, sector=sector)
 
     # =========================================================
     # SCORING
@@ -210,7 +257,6 @@ async def run_agent_with_progress(project_id, embedding, send_update):
     await send_update(project_id, "Calculating final score")
 
     project_data = structured
-    sector = "forestry"
     master_sdgs = master["sectors"][sector]["sdgs"]
 
     sdg_scores = []
@@ -254,13 +300,13 @@ async def run_agent_with_progress(project_id, embedding, send_update):
     final_score = sum(sdg_scores) / len(sdg_scores) if sdg_scores else 0
 
     final_output = {
-        "sector": "forestry",
+        "sector": sector,
         "final_score": final_score,
         "sdgs": output_sdgs
     }
 
     # =========================================================
-    # 🔥 SAVE SCORE TO DB
+    # 🔥 SAVE SCORE
     # =========================================================
     await send_update(project_id, "Saving score to database")
 

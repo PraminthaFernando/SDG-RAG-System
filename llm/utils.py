@@ -735,7 +735,7 @@ SDG_TARGETS = {
                 "indicators": {
                     "7.2.1": {
                         "indicator_id": "7.2.1",
-                        "indicator_description": "Renewable energy share in the total final energy consumption"
+                        "indicator_description": "renewable energy share in the total final energy consumption"
                     }
                 }
             },
@@ -2070,8 +2070,9 @@ SDG_TARGETS = {
 }
 
 SDG_TARGETS_V2 = {
-  "name": "Forestry",
-  "indicator_mappings": [
+    "sectors":{
+        "forestry":{
+            "indicator_mappings":[
     {
       "IndicatorId": "forestry01",
       "Indicator": "1.1.1 Proportion of the population living below the international poverty line by sex, age, employment status and geographic location (urban/rural)",
@@ -2405,4 +2406,245 @@ SDG_TARGETS_V2 = {
       "Data Unit": "ha"
     }
   ]
+        },
+        "renewables":{
+            "indicator_mappings":[
+    {
+      "IndicatorId": "renewable01",
+      "Indicator": "1.1.1 Proportion of the population living below the international poverty line by sex, age, employment status and geographic location (urban/rural)",
+      "SDG": "1. No poverty",
+      "SDG_Target": "1.1 By 2030, eradicate extreme poverty for all people everywhere, currently measured as people living on less than $1.25 a day",
+      "Description": "Refer to E-handbook on SDG indic https://unstats.un.org/wiki/display/SDGeHandbook/Goal+1",
+      "Guidance, calculation method and other considerations": None,
+      "Data Unit": None
+    },
+    {
+      "IndicatorId": "renewable02",
+      "Indicator": "1.2.1 Proportion of population living below the national poverty line, by sex and age",
+      "SDG": "1. No poverty",
+      "SDG_Target": "1.2 By 2030, reduce at least by half the proportion of men, women and children of all ages living in poverty in all its dimensions according to national definitions",
+      "Description": "Refer to E-handbook on SDG indic https://unstats.un.org/wiki/display/SDGeHandbook/Goal+1",
+      "Guidance, calculation method and other considerations": None,
+      "Data Unit": None
+    },
+    {
+      "IndicatorId": "renewable03",
+      "Indicator": "Number of employees provided skill development training",
+      "SDG": "4. Quality education",
+      "SDG_Target": "4.4 By 2030, substantially increase the number of youth and adults who have relevant skills, including technical and vocational skills, for employment, decent jobs and entrepreneurship",
+      "Description": "Refers to the number of employees (full-time, part-time, or temporary), by gender who received training services of any type via project during the reporting period.",
+      "Guidance, calculation method and other considerations": "It refers to the number of individual employees, by gender who received training of any type via project during the reporting period. Training can be categorized as: (1) skills-based training; (2) cross-job functions; (3) literacy and life skills; (4) diversity and inclusion.",
+      "Data Unit": "Number"
+    },
+    {
+      "IndicatorId": "renewable04",
+      "Indicator": "Number of training hours provided for employees (full-time, part-time, or temporary), disaggregated per gender",
+      "SDG": "4. Quality education",
+      "SDG_Target": "4.4 By 2030, substantially increase the number of youth and adults who have relevant skills",
+      "Description": "Refers to the sum of all training hours provided to employees.",
+      "Guidance, calculation method and other considerations": "Number of training hours provided for employees during the reporting period.",
+      "Data Unit": "Number"
+    },
+    {
+      "IndicatorId": "renewable05",
+      "Indicator": "Average time saving associated with cooking time and fuel collection",
+      "SDG": "5. Gender equality",
+      "SDG_Target": "5.4 Recognize and value unpaid care and domestic work",
+      "Description": "Refers to the time saving due to adoption of project technology.",
+      "Guidance, calculation method and other considerations": "Project shall report how saved time is used.",
+      "Data Unit": "minutes/hr per household"
+    },
+    {
+      "IndicatorId": "renewable06",
+      "Indicator": "Gender wage equity",
+      "SDG": "5. Gender equality",
+      "SDG_Target": "5.1 End all forms of discrimination against all women and girls everywhere",
+      "Description": "Ratio of the average wage paid to female employees compared to male employees for the same position.",
+      "Guidance, calculation method and other considerations": "(Average female wage) / (Average male wage)",
+      "Data Unit": "Ratio"
+    },
+    {
+      "IndicatorId": "renewable07",
+      "Indicator": "Number of women serving in managerial/ leadership /ownership role",
+      "SDG": "5. Gender equality",
+      "SDG_Target": "5.5 Ensure women’s full and effective participation",
+      "Description": "Refers to number of female managers employed.",
+      "Guidance, calculation method and other considerations": "Number of unique female managers.",
+      "Data Unit": "Number"
+    },
+    {
+      "IndicatorId": "renewable08",
+      "Indicator": "5.5.2 Proportion of women in managerial positions",
+      "SDG": "5. Gender equality",
+      "SDG_Target": "5.5 Ensure women’s full and effective participation",
+      "Description": "Proportion of females in total managerial positions.",
+      "Guidance, calculation method and other considerations": "Refer to SDG metadata.",
+      "Data Unit": "%"
+    },
+    {
+      "IndicatorId": "renewable09",
+      "Indicator": "Total electricity produced: renewable",
+      "SDG": "7. Affordable and clean energy",
+      "SDG_Target": "7.2 Increase substantially renewable energy share",
+      "Description": "Net electricity production from renewable sources.",
+      "Guidance, calculation method and other considerations": "Provide net electricity generated.",
+      "Data Unit": "MWh"
+    },
+    {
+      "IndicatorId": "renewable10",
+      "Indicator": "Total thermal energy produced: renewable",
+      "SDG": "7. Affordable and clean energy",
+      "SDG_Target": "7.2 Increase renewable energy share",
+      "Description": "Thermal energy production from renewable sources.",
+      "Guidance, calculation method and other considerations": "Displace fossil fuel use.",
+      "Data Unit": "Giga Joule"
+    },
+    {
+      "IndicatorId": "renewable11",
+      "Indicator": "Total electricity consumed: renewable",
+      "SDG": "7. Affordable and clean energy",
+      "SDG_Target": "7.2 Increase renewable energy share",
+      "Description": "Electricity consumption produced via renewable technologies.",
+      "Guidance, calculation method and other considerations": "Disaggregate by user category.",
+      "Data Unit": "MWh"
+    },
+    {
+      "IndicatorId": "renewable12",
+      "Indicator": "Number of beneficiaries: Households",
+      "SDG": "7. Affordable and clean energy",
+      "SDG_Target": "7.1 Ensure universal access to modern energy",
+      "Description": "Unique households provided access to clean energy.",
+      "Guidance, calculation method and other considerations": "Follow conservative estimation approach.",
+      "Data Unit": "Number of households"
+    },
+    {
+      "IndicatorId": "renewable13",
+      "Indicator": "Number of beneficiaries: Individuals",
+      "SDG": "7. Affordable and clean energy",
+      "SDG_Target": "7.1 Ensure universal access to modern energy",
+      "Description": "Unique individuals provided access to clean energy.",
+      "Guidance, calculation method and other considerations": "Account only active users.",
+      "Data Unit": "Number of users"
+    },
+    {
+      "IndicatorId": "renewable14",
+      "Indicator": "Total energy savings",
+      "SDG": "7. Affordable and clean energy",
+      "SDG_Target": "7.3 Double rate of energy efficiency improvement",
+      "Description": "Total energy savings achieved by the project.",
+      "Guidance, calculation method and other considerations": "Units × (baseline − project consumption).",
+      "Data Unit": "Tera Joule or other units"
+    },
+    {
+      "IndicatorId": "renewable15",
+      "Indicator": "7.1.1 Proportion of population with access to electricity",
+      "SDG": "7. Affordable and clean energy",
+      "SDG_Target": "7.1 Ensure universal access to electricity",
+      "Description": "Proportion of population with access to electricity.",
+      "Guidance, calculation method and other considerations": "Disaggregate by grid/off-grid.",
+      "Data Unit": "%"
+    },
+    {
+      "IndicatorId": "renewable16",
+      "Indicator": "Total number of jobs",
+      "SDG": "8. Decent work and economic growth",
+      "SDG_Target": "8.5 Achieve full and productive employment",
+      "Description": "Total jobs generated by project.",
+      "Guidance, calculation method and other considerations": "Disclose by contract and gender.",
+      "Data Unit": "Number"
+    },
+    {
+      "IndicatorId": "renewable17",
+      "Indicator": "Total number of employees earning above local minimum wage",
+      "SDG": "8. Decent work and economic growth",
+      "SDG_Target": "8.5 Achieve full and productive employment",
+      "Description": "Employees earning above local minimum wage.",
+      "Guidance, calculation method and other considerations": "Provide minimum wage source.",
+      "Data Unit": "Number"
+    },
+    {
+      "IndicatorId": "renewable18",
+      "Indicator": "Total Number of employees paid living wage",
+      "SDG": "8. Decent work and economic growth",
+      "SDG_Target": "8.5 Achieve full and productive employment",
+      "Description": "Employees paid living wage.",
+      "Guidance, calculation method and other considerations": "Follow Anker methodology.",
+      "Data Unit": "USD or local currency per month"
+    },
+    {
+      "IndicatorId": "renewable19",
+      "Indicator": "8.5.1 Average hourly earnings of employees",
+      "SDG": "8. Decent work and economic growth",
+      "SDG_Target": "8.5 Achieve full and productive employment",
+      "Description": "Mean hourly earnings by sex and occupation.",
+      "Guidance, calculation method and other considerations": "Can calculate gender pay gap.",
+      "Data Unit": None
+    },
+    {
+      "IndicatorId": "renewable20",
+      "Indicator": "Number of unique households (HHs) that received on grid renewable energy services",
+      "SDG": "11. Sustainable cities and communities",
+      "SDG_Target": "11.1 Ensure access to housing and services",
+      "Description": None,
+      "Guidance, calculation method and other considerations": "HH(RE) calculation method.",
+      "Data Unit": "Number of households"
+    },
+    {
+      "IndicatorId": "renewable21",
+      "Indicator": "Number of unique households (HHs) that received off grid renewable energy services",
+      "SDG": "11. Sustainable cities and communities",
+      "SDG_Target": "11.1 Ensure access to housing and services",
+      "Description": None,
+      "Guidance, calculation method and other considerations": "HH(WM) calculation method.",
+      "Data Unit": "Number of households"
+    },
+    {
+      "IndicatorId": "renewable22",
+      "Indicator": "Number of unique households (HHs) that benefitted from urban development solutions",
+      "SDG": "11. Sustainable cities and communities",
+      "SDG_Target": "11.1 Ensure access to housing and services",
+      "Description": None,
+      "Guidance, calculation method and other considerations": "HH(UD) calculation method.",
+      "Data Unit": "Number of households"
+    },
+    {
+      "IndicatorId": "renewable23",
+      "Indicator": "12.2.1 Material footprint, material footprint per capita, and material footprint per GDP",
+      "SDG": "12. Responsible consumption and production",
+      "SDG_Target": "12.2 Sustainable resource management",
+      "Description": "NA",
+      "Guidance, calculation method and other considerations": "NA",
+      "Data Unit": "NA"
+    },
+    {
+      "IndicatorId": "renewable24",
+      "Indicator": "12.a.1 Installed renewable energy-generating capacity in developing countries",
+      "SDG": "12. Responsible consumption and production",
+      "SDG_Target": "12.a Support developing countries",
+      "Description": None,
+      "Guidance, calculation method and other considerations": None,
+      "Data Unit": None
+    },
+    {
+      "IndicatorId": "renewable25",
+      "Indicator": "Amount of GHGs emissions avoided or sequestered",
+      "SDG": "13. Climate action",
+      "SDG_Target": "13.2 Integrate climate change measures",
+      "Description": "Total GHG emissions avoided or sequestered.",
+      "Guidance, calculation method and other considerations": "Use validated GHG methodology.",
+      "Data Unit": "tCO2eq"
+    },
+    {
+      "IndicatorId": "renewable26",
+      "Indicator": "Total non-renewable wood fuel saved",
+      "SDG": "15. Life on land",
+      "SDG_Target": "15.1 Conservation and restoration of ecosystems",
+      "Description": "Total non-renewable wood fuel saved.",
+      "Guidance, calculation method and other considerations": "Adjust for non-renewable biomass fraction.",
+      "Data Unit": "tonnes/ year"
+    }
+  ]
+        }
+    }
 }
+
