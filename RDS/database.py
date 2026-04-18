@@ -1,7 +1,16 @@
+import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from dotenv import load_dotenv
 
-DATABASE_URL = "postgresql://postgres:%23Savfyp1234@fypdb.c676iawos7ws.us-east-1.rds.amazonaws.com:5432/FYPDB"
+# Load .env file
+load_dotenv()
+
+# Fetch from environment
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+if not DATABASE_URL:
+    raise ValueError("DATABASE_URL is not set in environment variables")
 
 engine = create_engine(DATABASE_URL)
 
