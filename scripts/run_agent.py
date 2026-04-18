@@ -12,32 +12,8 @@ from query_transform.pipeline import QueryTransformationPipeline
 from scoring.modules.rebuild_master import rebuild_master_criteria
 from scoring.modules.normalize_projects import normalize as normalize_text
 
-from sqlalchemy import text
-
-
-# =========================================================
-# 🔥 FETCH PROJECT SECTOR FROM DB
-# =========================================================
-def get_project_sector(db, project_id: str):
-
-    result = db.execute(
-        text("""
-            SELECT project_category
-            FROM verra_metadata
-            WHERE project_id = :pid
-        """),
-        {"pid": project_id}
-    ).fetchone()
-
-    if not result:
-        return "forestry"  # default fallback
-
-    category = (result[0] or "").lower()
-
-    if "agriculture" in category or "forestry" in category:
-        return "forestry"
-
-    return "renewables"
+# ✅ NEW: unified sector logic
+from RDS.fetch_type import get_project_sector
 
 
 # =========================================================
@@ -179,13 +155,14 @@ async def run_agent_with_progress(project_id, embedding, send_update):
     )
 
     # =========================================================
-    # 🔥 GET SECTOR FROM DB
+    # 🔥 GET SECTOR (NOW SUPPORTS GS + VERRA)
     # =========================================================
     from RDS.database import SessionLocal
 
     db = SessionLocal()
     try:
-        sector = get_project_sector(db, project_id)
+        sector_info = get_project_sector(db, project_id)
+        sector = sector_info["sector"]
     finally:
         db.close()
 

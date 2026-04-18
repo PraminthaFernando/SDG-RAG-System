@@ -16,9 +16,12 @@ from embeddings.embedding_factory import EmbeddingFactory
 from vectordb.vector_store import VectorStore
 from scripts.utils import setup_logger
 
-# 🔥 DB IMPORTS
+# 🔥 SOURCES
+from ingestion.sources.verra import process_verra_project
+from ingestion.sources.gs import process_gs_project
+
+# 🔥 DB
 from RDS.database import SessionLocal
-from RDS.crud_metadata import upsert_metadata
 from RDS.crud_docs import replace_project_documents
 
 
@@ -30,129 +33,7 @@ def log_step(logger, msg):
 
 
 # =========================================================
-# 🔥 METADATA FETCH
-# =========================================================
-def fetch_verra_metadata(pid: str, logger: Logger):
-    try:
-        numeric_id = pid.replace("VCS_", "")
-        url = f"https://registry.verra.org/uiapi/resource/resourceSummary/{numeric_id}"
-
-        logger.info(f"[{pid}] 🌐 Fetching metadata...")
-        res = requests.get(url, timeout=30)
-        res.raise_for_status()
-        data = res.json()
-
-        def get_attr(code):
-            for p in data.get("participationSummaries", []):
-                for attr in p.get("attributes", []):
-                    if attr.get("code") == code:
-                        return attr.get("values", [{}])[0].get("value")
-            return None
-
-        def to_int(val):
-            try:
-                return int(float(val)) if val else None
-            except:
-                return None
-
-        metadata = {
-            "project_id": pid,
-            "project_name": data.get("resourceName") or "",
-            "description": data.get("description") or "",
-            "latitude": data.get("location", {}).get("latitude"),
-            "longitude": data.get("location", {}).get("longitude"),
-            "state_province": get_attr("STATE_PROVINCE") or "",
-            "project_status": get_attr("PROJECT_STATUS") or "",
-            "annual_emission_reduction": to_int(get_attr("EST_ANNUAL_EMISSION_REDCT")),
-            "buffer_pool_credits": to_int(get_attr("TOTAL_BUFFER_POOL_CREDITS")),
-            "project_category": get_attr("PRIMARY_PROJECT_CATEGORY_NAME") or "",
-            "project_subcategory": get_attr("PROJECT_SUBCATERGORY_NAMES") or "",
-            "registration_date": get_attr("PROJECT_REGISTRATION_DATE") or "",
-            "crediting_period": get_attr("CREDIT_PERIOD_INFO") or ""
-        }
-
-        return metadata, data.get("documentGroups", [])
-
-    except Exception as e:
-        logger.error(f"[{pid}] ❌ Metadata fetch failed: {e}")
-        return None, []
-
-
-# =========================================================
-# 🔥 EXTRACT DOCUMENTS
-# =========================================================
-def extract_documents(document_groups):
-    docs = []
-    for group in document_groups:
-        for d in group.get("documents", []):
-            docs.append({
-                "documentName": d.get("documentName"),
-                "documentType": d.get("documentType"),
-                "uploadDate": d.get("uploadDate"),
-                "uri": d.get("uri")
-            })
-    return docs
-
-
-# =========================================================
-# 🔥 FILTERING
-# =========================================================
-def classify_doc(doc):
-    text = ((doc.get("documentName") or "") + " " +
-            (doc.get("documentType") or "")).lower()
-
-    if any(k in text for k in ["monitor", "mr"]):
-        return "monitoring"
-    if any(k in text for k in ["verif", "vr"]):
-        return "verification"
-    if any(k in text for k in ["proj", "pdd"]):
-        return "description"
-    if any(k in text for k in ["valid"]):
-        return "validation"
-
-    return "other"
-
-
-def is_noise(doc):
-    name = (doc.get("documentName") or "").lower()
-    return any(k in name for k in ["draft", "summary", "kml", "agreement", "annex"])
-
-
-def clean_and_group_docs(docs):
-    grouped = {"monitoring": [], "verification": [], "description": [], "validation": []}
-
-    for d in docs:
-        if is_noise(d):
-            continue
-
-        cat = classify_doc(d)
-        if cat in grouped:
-            grouped[cat].append(d)
-
-    return grouped
-
-
-# =========================================================
-# 🔥 PICK BEST DOC
-# =========================================================
-def pick_best_docs(grouped):
-    selected = []
-
-    def latest(docs):
-        if not docs:
-            return None
-        return sorted(docs, key=lambda x: x.get("uploadDate", ""), reverse=True)[0]
-
-    for key in ["monitoring", "verification", "description", "validation"]:
-        doc = latest(grouped[key])
-        if doc:
-            selected.append(doc)
-
-    return selected[:1]
-
-
-# =========================================================
-# 🔥 BULLETPROOF TEMP PROCESS
+# 🔥 DOWNLOAD + PROCESS PDF (SOURCE-AWARE FIX)
 # =========================================================
 def process_url_temp(doc, pid, pipeline):
     tmp_path = None
@@ -161,9 +42,28 @@ def process_url_temp(doc, pid, pipeline):
         url = doc["uri"]
         filename = doc["documentName"]
 
-        res = requests.get(url, timeout=60)
+        # 🔥 SOURCE-AWARE HEADERS
+        if "goldstandard" in url:
+            headers = {
+                "accept": "*/*",
+                "accept-language": "en-US,en;q=0.9",
+                "referer": f"https://assurance-platform.goldstandard.org/project-documents/{pid.replace('_','')}",
+                "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/147 Safari/537.36",
+                "x-gold-standard-api-version": "2023-04-19"
+            }
+        else:
+            headers = {}
+
+        res = requests.get(url, headers=headers, timeout=60)
+
+        # 🔥 HANDLE BLOCKED DOCS
+        if res.status_code == 403:
+            print(f"[{pid}] ⚠️ Skipping restricted document: {filename}")
+            return []
+
         res.raise_for_status()
 
+        # 🔥 SAVE TEMP FILE
         tmp_path = os.path.join(
             tempfile.gettempdir(),
             f"{pid}_{int(time.time() * 1000)}.pdf"
@@ -174,6 +74,7 @@ def process_url_temp(doc, pid, pipeline):
 
         time.sleep(0.05)
 
+        # 🔥 INGEST
         document = pipeline.ingest(pid=pid, filename=tmp_path)
 
         return [
@@ -209,42 +110,56 @@ async def process_project_with_progress(base_path, proj, workers, logger, store,
 
     pipeline = IngestionPipeline(pdf_base_path=tempfile.gettempdir())
 
-    # -------------------------
-    # METADATA
-    # -------------------------
+    # =========================================================
+    # 🔥 FETCH SOURCE DATA
+    # =========================================================
     await send_update(proj, "Fetching metadata")
-    metadata, document_groups = fetch_verra_metadata(proj, logger)
+
+    if proj.startswith("VCS"):
+        metadata, selected = process_verra_project(proj, logger)
+        source = "verra"
+
+    elif proj.startswith("GS"):
+        # 🔥 FIX: PASS send_update
+        metadata, selected = process_gs_project(proj, logger, send_update)
+        source = "gs"
+
+    else:
+        raise ValueError(f"Unknown project type: {proj}")
 
     await send_update(proj, "Metadata fetched")
 
+    # =========================================================
+    # 🔥 SAVE METADATA
+    # =========================================================
     if metadata:
         db = SessionLocal()
         try:
-            upsert_metadata(db, metadata)
+            if source == "verra":
+                from RDS.crud_metadata import upsert_metadata
+                upsert_metadata(db, metadata)
+
+            elif source == "gs":
+                from RDS.crud_metadata_gs import upsert_metadata_gs
+                upsert_metadata_gs(db, metadata)
+
         finally:
             db.close()
 
-    # -------------------------
-    # DOCUMENT SELECTION
-    # -------------------------
-    await send_update(proj, "Selecting best documents")
+    # =========================================================
+    # 🔥 SAVE DOCUMENTS
+    # =========================================================
+    await send_update(proj, "Saving selected documents")
 
-    docs = extract_documents(document_groups)
-    grouped = clean_and_group_docs(docs)
-    selected = pick_best_docs(grouped)
-
-    # -------------------------
-    # SAVE DOCS TO DB
-    # -------------------------
     db = SessionLocal()
     try:
         replace_project_documents(db, proj, selected)
     finally:
         db.close()
 
-    # -------------------------
-    # PROCESSING
-    # -------------------------
+    # =========================================================
+    # 🔥 PROCESS PDFs
+    # =========================================================
     await send_update(proj, f"Processing {len(selected)} PDFs")
 
     all_docs = []
@@ -264,9 +179,9 @@ async def process_project_with_progress(base_path, proj, workers, logger, store,
 
     await send_update(proj, f"Extracted {len(all_docs)} chunks")
 
-    # -------------------------
-    # EMBEDDING
-    # -------------------------
+    # =========================================================
+    # 🔥 EMBEDDINGS
+    # =========================================================
     await send_update(proj, "Generating embeddings")
 
     if all_docs:
@@ -292,7 +207,6 @@ if __name__ == "__main__":
 
     store = VectorStore(embedding)
 
-    # 🔥 THIS IS THE MISSING PIECE
     store.initialize(
         reset=False,
         model="nomic",

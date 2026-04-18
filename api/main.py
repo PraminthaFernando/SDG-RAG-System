@@ -1,7 +1,6 @@
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, BackgroundTasks
 from pathlib import Path
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi import BackgroundTasks
 import asyncio
 from sqlalchemy import text
 
@@ -9,7 +8,7 @@ from sqlalchemy import text
 from RDS.database import SessionLocal
 from RDS.crud_metadata import get_metadata
 from RDS.crud_score import get_project_score as get_score_from_db
-from RDS.crud_llm import get_llm_result  # ✅ NEW
+from RDS.crud_llm import get_llm_result
 
 app = FastAPI()
 
@@ -33,13 +32,37 @@ def root():
 
 
 # =========================================================
-# 🔥 METADATA FROM DB
+# 🔥 HELPER: DETECT SOURCE
+# =========================================================
+def detect_source(project_id: str):
+    if project_id.startswith("VCS_"):
+        return "verra"
+    if project_id.startswith("GS_"):
+        return "gs"
+    return None
+
+
+# =========================================================
+# 🔥 METADATA (AUTO DETECT)
 # =========================================================
 @app.get("/project/{project_id}")
 def get_project_metadata(project_id: str):
     db = SessionLocal()
     try:
-        result = get_metadata(db, project_id)
+        source = detect_source(project_id)
+
+        if source == "verra":
+            result = get_metadata(db, project_id)
+
+        elif source == "gs":
+            result = db.execute(text("""
+                SELECT *
+                FROM gs_metadata
+                WHERE project_id = :pid
+            """), {"pid": project_id}).mappings().fetchone()
+
+        else:
+            result = None
 
         if not result:
             raise HTTPException(status_code=404, detail="Project not found")
@@ -53,7 +76,7 @@ def get_project_metadata(project_id: str):
 
 
 # =========================================================
-# 🔥 LLM RESULTS FROM DB (UPDATED ✅)
+# 🔥 LLM RESULTS
 # =========================================================
 @app.get("/project/{project_id}/llm")
 def get_project_llm(project_id: str):
@@ -64,7 +87,7 @@ def get_project_llm(project_id: str):
         if not result:
             raise HTTPException(status_code=404, detail="LLM results not found")
 
-        return result  # already JSON
+        return result
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -73,7 +96,7 @@ def get_project_llm(project_id: str):
 
 
 # =========================================================
-# 🔥 SCORE FROM DB
+# 🔥 SCORE
 # =========================================================
 @app.get("/project/{project_id}/score")
 def get_project_score(project_id: str):
@@ -119,6 +142,43 @@ def list_verra_projects():
                 "status": r["project_status"],
                 "category": r["project_category"],
                 "credits": r["annual_emission_reduction"]
+            }
+            for r in rows
+        ]
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        db.close()
+
+
+# =========================================================
+# 🔥 LIST GS PROJECTS
+# =========================================================
+@app.get("/projects/gs")
+def list_gs_projects():
+    db = SessionLocal()
+    try:
+        result = db.execute(text("""
+            SELECT 
+                project_id,
+                project_name,
+                project_status,
+                project_type,
+                annual_credits
+            FROM gs_metadata
+            ORDER BY created_at DESC
+        """))
+
+        rows = result.mappings().all()
+
+        return [
+            {
+                "id": r["project_id"],
+                "name": r["project_name"],
+                "status": r["project_status"],
+                "category": r["project_type"],
+                "credits": r["annual_credits"]
             }
             for r in rows
         ]
@@ -197,13 +257,13 @@ async def start_ingestion(project_id: str, background_tasks: BackgroundTasks):
             # 🔥 VECTOR DB
             await send_update(project_id, "Connecting to vector database")
             store = VectorStore(embedding_model)
-            store.initialize(False, model="nomic", collection="nomic")  # ✅ REQUIRED
+            store.initialize(False, model="nomic", collection="nomic")
 
             # 🔥 INGESTION
             await send_update(project_id, "Starting ingestion pipeline")
 
             await process_project_with_progress(
-                base_path=Path("temp"),  # ✅ not used anymore
+                base_path=Path("temp"),
                 proj=project_id,
                 workers=2,
                 logger=logger,
@@ -211,7 +271,7 @@ async def start_ingestion(project_id: str, background_tasks: BackgroundTasks):
                 send_update=send_update
             )
 
-            # 🔥 SDG PIPELINE
+            # 🔥 SDG ANALYSIS
             from scripts.run_agent import run_agent_with_progress
 
             await send_update(project_id, "🚀 Starting SDG analysis")
