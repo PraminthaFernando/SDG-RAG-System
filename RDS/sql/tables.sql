@@ -48,8 +48,7 @@ CREATE TABLE project_documents (
 
 CREATE TABLE project_llm_results (
     project_id TEXT PRIMARY KEY,
-    llm_result JSONB NOT NULL,
-
+    s3_path TEXT NOT NULL,
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
 );

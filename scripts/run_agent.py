@@ -12,7 +12,6 @@ from query_transform.pipeline import QueryTransformationPipeline
 from scoring.modules.rebuild_master import rebuild_master_criteria
 from scoring.modules.normalize_projects import normalize as normalize_text
 
-# ✅ NEW: unified sector logic
 from RDS.fetch_type import get_project_sector
 
 
@@ -106,7 +105,6 @@ def run_pipeline(pid, retrieval_service, retriev_policy_service, sector, progres
             progress_callback(i, total, target["Indicator"])
 
         sdg_goal = target["SDG"]
-
         final_output.setdefault(sdg_goal, [])
 
         description = f"""
@@ -120,7 +118,8 @@ Data Unit: {target['Data Unit']}
 
         try:
             final_answer = pipeline.run(description, pid, description)
-        except:
+        except Exception as e:
+            print(f"[{pid}] ❌ LLM failed: {e}")
             continue
 
         final_answer["target"] = target["SDG_Target"]
@@ -155,14 +154,14 @@ async def run_agent_with_progress(project_id, embedding, send_update):
     )
 
     # =========================================================
-    # 🔥 GET SECTOR (NOW SUPPORTS GS + VERRA)
+    # GET SECTOR
     # =========================================================
     from RDS.database import SessionLocal
 
     db = SessionLocal()
     try:
         sector_info = get_project_sector(db, project_id)
-        sector = sector_info["sector"]
+        sector = sector_info.get("sector", "renewables")
     finally:
         db.close()
 
@@ -193,29 +192,41 @@ async def run_agent_with_progress(project_id, embedding, send_update):
         )
 
     # =========================================================
-    # 🔥 RUN LLM
+    # RUN LLM
     # =========================================================
-    results = await loop.run_in_executor(
-        None,
-        lambda: run_pipeline(
-            pid=project_id,
-            retrieval_service=retrieval_service,
-            retriev_policy_service=retriev_policy_service,
-            sector=sector,
-            progress_callback=progress_callback
+    results = None
+
+    try:
+        results = await loop.run_in_executor(
+            None,
+            lambda: run_pipeline(
+                pid=project_id,
+                retrieval_service=retrieval_service,
+                retriev_policy_service=retriev_policy_service,
+                sector=sector,
+                progress_callback=progress_callback
+            )
         )
-    )
+    except Exception as e:
+        await send_update(project_id, f"❌ LLM execution failed: {str(e)}", "failed")
+        return
+
+    if not results:
+        await send_update(project_id, "❌ No LLM results generated", "failed")
+        return
 
     # =========================================================
-    # 🔥 SAVE LLM RESULTS
+    # SAVE LLM RESULTS (S3)
     # =========================================================
-    await send_update(project_id, "Saving LLM results to database")
+    await send_update(project_id, "Saving LLM results (S3 upload)")
 
     from RDS.crud_llm import upsert_llm_result
 
     db = SessionLocal()
     try:
         upsert_llm_result(db, project_id, results)
+    except Exception as e:
+        print(f"[{project_id}] ❌ Failed to store LLM results: {e}")
     finally:
         db.close()
 
@@ -226,64 +237,76 @@ async def run_agent_with_progress(project_id, embedding, send_update):
     # =========================================================
     await send_update(project_id, "Normalizing results")
 
-    structured = normalize_single_project(results, master, sector=sector)
+    try:
+        structured = normalize_single_project(results, master, sector=sector)
+    except Exception as e:
+        await send_update(project_id, f"❌ Normalization failed: {str(e)}", "failed")
+        return
+
+    # 🔥 NOW safe to free memory
+    del results
 
     # =========================================================
     # SCORING
     # =========================================================
     await send_update(project_id, "Calculating final score")
 
-    project_data = structured
-    master_sdgs = master["sectors"][sector]["sdgs"]
+    try:
+        project_data = structured
+        master_sdgs = master["sectors"][sector]["sdgs"]
 
-    sdg_scores = []
-    output_sdgs = {}
+        sdg_scores = []
+        output_sdgs = {}
 
-    for sdg_id, sdg_data in master_sdgs.items():
+        for sdg_id, sdg_data in master_sdgs.items():
 
-        target_scores = []
+            target_scores = []
 
-        for target_id, target_data in sdg_data["targets"].items():
+            for target_id, target_data in sdg_data["targets"].items():
 
-            indicators = target_data["indicators"]
-            total = len(indicators)
+                indicators = target_data["indicators"]
+                total = len(indicators)
 
-            if total == 0:
-                continue
+                if total == 0:
+                    continue
 
-            score_sum = 0
+                score_sum = 0
 
-            for ind_id in indicators.keys():
-                val = (
-                    project_data.get("sdgs", {})
-                    .get(sdg_id, {})
-                    .get("targets", {})
-                    .get(target_id, {})
-                    .get("indicators", {})
-                    .get(ind_id, {})
-                    .get("score", 0)
-                )
+                for ind_id in indicators.keys():
+                    val = (
+                        project_data.get("sdgs", {})
+                        .get(sdg_id, {})
+                        .get("targets", {})
+                        .get(target_id, {})
+                        .get("indicators", {})
+                        .get(ind_id, {})
+                        .get("score", 0)
+                    )
 
-                score_sum += min(val, 2)
+                    score_sum += min(val, 2)
 
-            target_score = score_sum / (2 * total)
-            target_scores.append(target_score)
+                target_score = score_sum / (2 * total)
+                target_scores.append(target_score)
 
-        sdg_score = sum(target_scores) / len(target_scores) if target_scores else 0
+            sdg_score = sum(target_scores) / len(target_scores) if target_scores else 0
 
-        output_sdgs[sdg_id] = {"score": sdg_score}
-        sdg_scores.append(sdg_score)
+            output_sdgs[sdg_id] = {"score": sdg_score}
+            sdg_scores.append(sdg_score)
 
-    final_score = sum(sdg_scores) / len(sdg_scores) if sdg_scores else 0
+        final_score = sum(sdg_scores) / len(sdg_scores) if sdg_scores else 0
 
-    final_output = {
-        "sector": sector,
-        "final_score": final_score,
-        "sdgs": output_sdgs
-    }
+        final_output = {
+            "sector": sector,
+            "final_score": final_score,
+            "sdgs": output_sdgs
+        }
+
+    except Exception as e:
+        await send_update(project_id, f"❌ Scoring failed: {str(e)}", "failed")
+        return
 
     # =========================================================
-    # 🔥 SAVE SCORE
+    # SAVE SCORE
     # =========================================================
     await send_update(project_id, "Saving score to database")
 

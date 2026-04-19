@@ -3,14 +3,28 @@ from pathlib import Path
 from fastapi.middleware.cors import CORSMiddleware
 import asyncio
 from sqlalchemy import text
+import boto3
+import os
 
 # 🔥 DB IMPORTS
 from RDS.database import SessionLocal
 from RDS.crud_metadata import get_metadata
 from RDS.crud_score import get_project_score as get_score_from_db
-from RDS.crud_llm import get_llm_result
 
 app = FastAPI()
+
+# =========================================================
+# 🔥 S3 CLIENT
+# =========================================================
+s3 = boto3.client(
+    "s3",
+    aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+    aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
+    region_name=os.getenv("AWS_REGION"),
+)
+
+BUCKET = os.getenv("AWS_BUCKET_NAME")
+
 
 # =========================================================
 # 🔥 CORS
@@ -22,6 +36,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 # =========================================================
 # 🔥 ROOT
@@ -43,7 +58,7 @@ def detect_source(project_id: str):
 
 
 # =========================================================
-# 🔥 METADATA (AUTO DETECT)
+# 🔥 METADATA
 # =========================================================
 @app.get("/project/{project_id}")
 def get_project_metadata(project_id: str):
@@ -69,28 +84,42 @@ def get_project_metadata(project_id: str):
 
         return dict(result)
 
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
     finally:
         db.close()
 
 
 # =========================================================
-# 🔥 LLM RESULTS
+# 🔥 NEW: LLM SIGNED URL ENDPOINT
 # =========================================================
-@app.get("/project/{project_id}/llm")
-def get_project_llm(project_id: str):
+@app.get("/project/{project_id}/llm-url")
+def get_llm_signed_url(project_id: str):
+
     db = SessionLocal()
     try:
-        result = get_llm_result(db, project_id)
+        # 🔥 Get S3 key from DB
+        result = db.execute(text("""
+            SELECT s3_path
+            FROM project_llm_results
+            WHERE project_id = :project_id
+        """), {"project_id": project_id}).fetchone()
 
         if not result:
-            raise HTTPException(status_code=404, detail="LLM results not found")
+            raise HTTPException(status_code=404, detail="LLM result not found")
 
-        return result
+        s3_key = result[0]
 
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        # 🔥 Generate signed URL (valid 5 mins)
+        url = s3.generate_presigned_url(
+            "get_object",
+            Params={
+                "Bucket": BUCKET,
+                "Key": s3_key
+            },
+            ExpiresIn=300
+        )
+
+        return {"url": url}
+
     finally:
         db.close()
 
@@ -109,8 +138,6 @@ def get_project_score(project_id: str):
 
         return result
 
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
     finally:
         db.close()
 
@@ -146,8 +173,6 @@ def list_verra_projects():
             for r in rows
         ]
 
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
     finally:
         db.close()
 
@@ -183,8 +208,6 @@ def list_gs_projects():
             for r in rows
         ]
 
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
     finally:
         db.close()
 
@@ -215,26 +238,22 @@ async def send_update(project_id: str, step: str, status: str = "running"):
 
 
 # =========================================================
-# 🔥 WEBSOCKET ENDPOINT
+# 🔥 WEBSOCKET
 # =========================================================
 @app.websocket("/ws/{project_id}")
 async def websocket_endpoint(websocket: WebSocket, project_id: str):
     await websocket.accept()
-
     connections.setdefault(project_id, []).append(websocket)
-
-    print(f"✅ WS connected: {project_id}")
 
     try:
         while True:
             await websocket.receive_text()
     except WebSocketDisconnect:
-        print(f"❌ WS disconnected: {project_id}")
         connections[project_id].remove(websocket)
 
 
 # =========================================================
-# 🔥 START FULL PIPELINE
+# 🔥 START PIPELINE
 # =========================================================
 @app.post("/project/{project_id}/start")
 async def start_ingestion(project_id: str, background_tasks: BackgroundTasks):
@@ -250,16 +269,13 @@ async def start_ingestion(project_id: str, background_tasks: BackgroundTasks):
 
             await send_update(project_id, "🚀 Initializing system")
 
-            # 🔥 EMBEDDING
             await send_update(project_id, "Loading embedding model")
             embedding_model = EmbeddingFactory.create("nomic", batch_size=32)
 
-            # 🔥 VECTOR DB
             await send_update(project_id, "Connecting to vector database")
             store = VectorStore(embedding_model)
             store.initialize(False, model="nomic", collection="nomic")
 
-            # 🔥 INGESTION
             await send_update(project_id, "Starting ingestion pipeline")
 
             await process_project_with_progress(
@@ -271,7 +287,6 @@ async def start_ingestion(project_id: str, background_tasks: BackgroundTasks):
                 send_update=send_update
             )
 
-            # 🔥 SDG ANALYSIS
             from scripts.run_agent import run_agent_with_progress
 
             await send_update(project_id, "🚀 Starting SDG analysis")
