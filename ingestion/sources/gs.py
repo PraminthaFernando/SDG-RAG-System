@@ -20,7 +20,7 @@ def safe_update(send_update, pid, msg):
 
 
 # =========================================================
-# 🔥 COMMON HEADERS (CRITICAL FOR GS API)
+# 🔥 COMMON HEADERS
 # =========================================================
 def get_headers():
     return {
@@ -28,7 +28,7 @@ def get_headers():
         "accept-language": "en-US,en;q=0.9",
         "origin": "https://registry.goldstandard.org",
         "referer": "https://registry.goldstandard.org/",
-        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/147 Safari/537.36",
+        "user-agent": "Mozilla/5.0",
     }
 
 
@@ -48,47 +48,34 @@ def fetch_gs_metadata(pid: str, logger: Logger):
 
         metadata = {
             "project_id": pid,
-
             "gs_project_numeric_id": numeric_id,
             "sustaincert_id": data.get("sustaincert_id"),
             "sustaincert_url": data.get("sustaincert_url"),
-
             "project_name": data.get("name"),
             "description": data.get("description"),
-
             "project_status": data.get("status"),
             "standard": data.get("gsf_standards_version"),
-
             "project_type": data.get("type"),
             "project_size": data.get("size"),
             "methodology": data.get("methodology"),
-
             "project_developer": data.get("project_developer"),
             "country": data.get("country"),
             "country_code": data.get("country_code"),
             "state": data.get("state"),
-
             "latitude": data.get("latitude"),
             "longitude": data.get("longitude"),
-
             "annual_credits": data.get("estimated_annual_credits"),
             "carbon_stream": data.get("carbon_stream"),
-
             "crediting_start_date": data.get("crediting_period_start_date"),
             "crediting_end_date": data.get("crediting_period_end_date"),
-
             "programme_of_activities": data.get("programme_of_activities"),
             "poa_project_id": data.get("poa_project_id"),
             "poa_project_sustaincert_id": data.get("poa_project_sustaincert_id"),
-
             "corsia_eligible": data.get("has_corsia_eligible_credits"),
-
             "sdgs": data.get("sustainable_development_goals"),
         }
 
-        gsid = data.get("sustaincert_id")
-
-        return metadata, gsid
+        return metadata, data.get("sustaincert_id")
 
     except Exception as e:
         logger.error(f"[{pid}] ❌ GS metadata fetch failed: {e}")
@@ -107,7 +94,6 @@ def fetch_gs_documents(gsid: str, logger: Logger):
         headers = {
             **get_headers(),
             "accept": "*/*",
-            "referer": f"https://assurance-platform.goldstandard.org/project-documents/GS{gsid}",
             "x-gold-standard-api-version": "2023-04-19"
         }
 
@@ -140,116 +126,98 @@ def extract_documents(gs_data):
 
             doc_id = d.get("id")
 
-            download_url = f"https://assurance-platform.goldstandard.org/api/public/documents/{doc_id}/download"
-
             docs.append({
                 "documentName": filename,
                 "documentType": req.get("requestType", ""),
                 "uploadDate": d.get("uploadedTimestamp"),
-                "uri": download_url
+                "uri": f"https://assurance-platform.goldstandard.org/api/public/documents/{doc_id}/download"
             })
 
     return docs
 
 
 # =========================================================
-# 🔥 CLASSIFICATION
+# 🔥 CLEAN
 # =========================================================
-def classify_doc(doc):
-    text = ((doc.get("documentName") or "") + " " +
-            (doc.get("documentType") or "")).lower()
-
-    if any(k in text for k in ["performance review", "monitor", "mr"]):
-        return "monitoring"
-
-    if any(k in text for k in ["verif", "verification"]):
-        return "verification"
-
-    if any(k in text for k in ["design", "project", "pdd"]):
-        return "description"
-
-    if any(k in text for k in ["valid"]):
-        return "validation"
-
-    return "other"
-
-
 def is_noise(doc):
     name = (doc.get("documentName") or "").lower()
-
-    return any(k in name for k in [
-        "draft", "summary", "kml", "agreement", "annex"
-    ])
+    return any(k in name for k in ["draft", "summary", "kml", "agreement", "annex"])
 
 
-def clean_and_group_docs(docs):
-    grouped = {
-        "monitoring": [],
-        "verification": [],
-        "description": [],
-        "validation": []
-    }
-
-    for d in docs:
-        if is_noise(d):
-            continue
-
-        cat = classify_doc(d)
-
-        if cat in grouped:
-            grouped[cat].append(d)
-
-    return grouped
+def clean_docs(docs):
+    return [d for d in docs if not is_noise(d)]
 
 
 # =========================================================
-# 🔥 SMART SELECTION (TOP DOCS)
+# 🔥 KEYWORD FILTER
 # =========================================================
-def pick_best_docs(grouped):
-    all_docs = []
-
-    for docs in grouped.values():
-        all_docs.extend(docs)
+def keyword_filter_top20(docs):
+    keywords = [
+        "monitor", "verification", "pdd",
+        "impact", "sdg", "report",
+        "emission", "benefit"
+    ]
 
     def score(doc):
         text = ((doc.get("documentName") or "") + " " +
                 (doc.get("documentType") or "")).lower()
+        return sum(1 for k in keywords if k in text)
 
-        score = 0
-
-        category = classify_doc(doc)
-        if category == "monitoring":
-            score += 5
-        elif category == "verification":
-            score += 4
-        elif category == "description":
-            score += 2
-        elif category == "validation":
-            score += 1
-
-        keywords = [
-            "sdg", "impact", "sustainable",
-            "monitoring", "performance",
-            "verification", "report",
-            "emission", "benefit", "outcome"
-        ]
-
-        for k in keywords:
-            if k in text:
-                score += 1
-
-        if doc.get("uploadDate"):
-            score += 1
-
-        return score
-
-    ranked = sorted(all_docs, key=score, reverse=True)
-
-    return ranked[:2]   # 🔥 adjust if needed
+    return sorted(docs, key=score, reverse=True)[:20]
 
 
 # =========================================================
-# 🔥 MAIN ENTRY FUNCTION (UPDATED WITH PROGRESS)
+# 🔥 LLM SELECTION
+# =========================================================
+def llm_select_best_docs(docs, logger: Logger, top_k=5):
+    try:
+        from llm.llm_client import GroqLLMClient
+        import json
+
+        client = GroqLLMClient()
+
+        prompt = f"""
+Select TOP {top_k} documents best for SDG impact evidence.
+
+Documents:
+{[d['documentName'] for d in docs]}
+
+Return ONLY JSON array of names.
+"""
+
+        res = client.invoke(prompt)
+        selected_names = json.loads(res)
+
+        selected = [d for d in docs if d["documentName"] in selected_names]
+
+        logger.info(f"🤖 LLM selected {len(selected)} docs")
+
+        return selected
+
+    except Exception as e:
+        logger.error(f"❌ LLM failed: {e}")
+        return docs[:top_k]
+
+
+# =========================================================
+# 🔥 FINAL SELECTION LOGIC
+# =========================================================
+def pick_best_docs(docs, logger: Logger):
+
+    if not docs:
+        return []
+
+    logger.info(f"📄 Total docs: {len(docs)}")
+
+    if len(docs) <= 20:
+        return llm_select_best_docs(docs, logger, 5)
+
+    filtered = keyword_filter_top20(docs)
+    return llm_select_best_docs(filtered, logger, 5)
+
+
+# =========================================================
+# 🔥 MAIN ENTRY FUNCTION
 # =========================================================
 def process_gs_project(pid: str, logger: Logger, send_update=None):
 
@@ -262,19 +230,19 @@ def process_gs_project(pid: str, logger: Logger, send_update=None):
 
     safe_update(send_update, pid, "Fetching GS documents")
 
-    gs_docs_data = fetch_gs_documents(gsid, logger)
+    raw = fetch_gs_documents(gsid, logger)
 
     safe_update(send_update, pid, "Extracting documents")
 
-    docs = extract_documents(gs_docs_data)
+    docs = extract_documents(raw)
 
     safe_update(send_update, pid, f"Found {len(docs)} documents")
 
-    grouped = clean_and_group_docs(docs)
+    docs = clean_docs(docs)
 
-    safe_update(send_update, pid, "Ranking documents")
+    safe_update(send_update, pid, "Selecting best documents (AI)")
 
-    selected = pick_best_docs(grouped)
+    selected = pick_best_docs(docs, logger)
 
     safe_update(send_update, pid, f"Selected {len(selected)} documents")
 

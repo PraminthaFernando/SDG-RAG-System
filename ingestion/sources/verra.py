@@ -56,6 +56,7 @@ def fetch_verra_metadata(pid: str, logger: Logger):
 # =========================================================
 def extract_documents(document_groups):
     docs = []
+
     for group in document_groups:
         for d in group.get("documents", []):
             docs.append({
@@ -64,6 +65,7 @@ def extract_documents(document_groups):
                 "uploadDate": d.get("uploadDate"),
                 "uri": d.get("uri")
             })
+
     return docs
 
 
@@ -101,6 +103,9 @@ def is_noise(doc):
     ])
 
 
+# =========================================================
+# 🔥 CLEAN + GROUP
+# =========================================================
 def clean_and_group_docs(docs):
     grouped = {
         "monitoring": [],
@@ -122,51 +127,106 @@ def clean_and_group_docs(docs):
 
 
 # =========================================================
-# 🔥 SMART RANKING (TOP 5)
+# 🔥 KEYWORD FILTER (FOR LARGE SETS)
 # =========================================================
-def pick_best_docs(grouped):
-    all_docs = []
-
-    for docs in grouped.values():
-        all_docs.extend(docs)
+def keyword_filter_top20(docs):
+    keywords = [
+        "monitor", "monitoring",
+        "verification", "verif", "vr",
+        "pdd", "project description",
+        "sdg", "impact", "report",
+        "emission", "benefit"
+    ]
 
     def score(doc):
         text = ((doc.get("documentName") or "") + " " +
                 (doc.get("documentType") or "")).lower()
 
-        score = 0
+        return sum(1 for k in keywords if k in text)
 
-        # 🔥 CATEGORY PRIORITY
-        category = classify_doc(doc)
-        if category == "monitoring":
-            score += 5
-        elif category == "verification":
-            score += 4
-        elif category == "description":
-            score += 2
-        elif category == "validation":
-            score += 1
+    ranked = sorted(docs, key=score, reverse=True)
 
-        # 🔥 SDG / IMPACT KEYWORDS
-        keywords = [
-            "sdg", "impact", "sustainable",
-            "monitoring", "report", "verification",
-            "emission", "benefit", "outcome"
+    return ranked[:20]
+
+
+# =========================================================
+# 🔥 LLM DOC SELECTOR
+# =========================================================
+def llm_select_best_docs(docs, logger: Logger, top_k=5):
+    try:
+        from llm.llm_client import GroqLLMClient
+
+        client = GroqLLMClient()
+
+        doc_list = [
+            {
+                "name": d.get("documentName"),
+                "date": d.get("uploadDate")
+            }
+            for d in docs
         ]
 
-        for k in keywords:
-            if k in text:
-                score += 1
+        prompt = f"""
+You are selecting the most useful documents for SDG impact analysis.
 
-        # 🔥 RECENCY BONUS
-        if doc.get("uploadDate"):
-            score += 1
+Select the TOP {top_k} documents that are most likely to contain:
+- SDG impact evidence
+- Monitoring results
+- Verification reports
+- Emission reductions
+- Community or sustainability benefits
 
-        return score
+Documents:
+{doc_list}
 
-    ranked = sorted(all_docs, key=score, reverse=True)
+Return ONLY a JSON array of selected document names.
+"""
 
-    return ranked[:2]   # 🔥 TOP 5
+        response = client.invoke(prompt)
+
+        import json
+        selected_names = json.loads(response)
+
+        selected = [d for d in docs if d["documentName"] in selected_names]
+
+        logger.info(f"🤖 LLM selected {len(selected)} documents")
+
+        return selected
+
+    except Exception as e:
+        logger.error(f"❌ LLM selection failed: {e}")
+
+        # fallback
+        return docs[:top_k]
+
+
+# =========================================================
+# 🔥 FINAL SMART SELECTION
+# =========================================================
+def pick_best_docs(grouped, logger: Logger):
+    all_docs = []
+
+    for docs in grouped.values():
+        all_docs.extend(docs)
+
+    if not all_docs:
+        return []
+
+    logger.info(f"📄 Total documents found: {len(all_docs)}")
+
+    # 🔥 SMALL SET
+    if len(all_docs) <= 20:
+        logger.info("📌 Using ALL docs for LLM selection")
+        return llm_select_best_docs(all_docs, logger, top_k=5)
+
+    # 🔥 LARGE SET
+    logger.info("📌 Large doc set → applying keyword filter")
+
+    filtered = keyword_filter_top20(all_docs)
+
+    logger.info(f"📌 Filtered to {len(filtered)} docs → sending to LLM")
+
+    return llm_select_best_docs(filtered, logger, top_k=5)
 
 
 # =========================================================
@@ -178,6 +238,8 @@ def process_verra_project(pid: str, logger: Logger):
 
     docs = extract_documents(document_groups)
     grouped = clean_and_group_docs(docs)
-    selected = pick_best_docs(grouped)
+
+    # 🔥 UPDATED LINE
+    selected = pick_best_docs(grouped, logger)
 
     return metadata, selected
