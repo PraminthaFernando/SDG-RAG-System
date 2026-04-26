@@ -17,6 +17,9 @@ class SDGJudgingBoard:
         self.debate_prompt = open(
             "agents/prompts/debate_prompt.txt"
         ).read()
+        self.summary_prompt = open(
+            "agents/prompts/get_summary.txt"
+        ).read()
 
     def _build_initial_prompt(self, query, evidences, context):
         return self.initial_prompt.format(
@@ -118,8 +121,18 @@ class SDGJudgingBoard:
         )
 
     def _final_output(self, score, results, confident):
+        result = "\n\n".join(
+            f"[Summary: {r['summary']} | Justification: {r['justification']}]"
+            for r in results
+        )
+        prompt = self.summary_prompt.format(
+            score=score,
+            result=result
+        )
+        summary = self.judges[0].get_summary(prompt=prompt)
         return {
-            "final_score": score,
+            "score": score,
             "confidence": confident,
-            "judgements": results
+            "judgements": results,
+            "summary": summary
         }

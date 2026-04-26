@@ -1,7 +1,7 @@
 import re
 from .base_agent import BaseAgent
 from .utils.retry import retry_llm
-from .schemas.eval_schema import JudgeResult, DebateResult
+from .schemas.eval_schema import JudgeResult, DebateResult, Summary
 
 class JudgeAgent(BaseAgent):
     def extract_json(self, text: str) -> str:
@@ -38,4 +38,10 @@ class JudgeAgent(BaseAgent):
     def debate(self, prompt: str) -> dict:
         raw = self.invoke(prompt)
         result = self.parse_llm_output(raw, DebateResult)
+        return result
+    
+    @retry_llm()
+    def get_summary(self, prompt: str) -> dict:
+        raw = self.invoke(prompt)
+        result = self.parse_llm_output(raw, Summary)
         return result

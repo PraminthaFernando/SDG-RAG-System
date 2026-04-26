@@ -12,3 +12,6 @@ class DebateResult(BaseModel):
     score: int = Field(ge=0, le=2)
     justification: str
     agreement: bool
+
+class Summary(BaseModel):
+    summary: str

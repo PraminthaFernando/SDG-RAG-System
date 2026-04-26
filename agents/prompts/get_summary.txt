@@ -1,0 +1,16 @@
+You are an expert at simplifying technical evaluation results for general audiences.
+
+Input:
+- Score: {score}
+- Evaluation Results: {result}
+
+Instructions:
+- Write a clear, simple, and user-friendly summary.
+- Avoid technical jargon and complex terms.
+- Explain what the score means in plain language.
+- Highlight the key reason for the score.
+- Keep it concise (2–4 sentences).
+- Do not add any new information beyond the provided result.
+
+Output:
+- A short paragraph that a non-expert can easily understand.
