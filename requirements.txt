@@ -9,6 +9,7 @@ numpy==1.26.4
 opencv-python==4.10.0.84
 ghostscript==0.7
 langchain==1.1.0
+langchain-groq
 langchain-community==0.4.1
 langchain-milvus==0.3.3
 pymilvus==2.6.0
@@ -21,3 +22,9 @@ transformers==5.2.0
 einops==0.8.2
 beautifulsoup4
 optimum==2.1.0
+uvicorn[standard]
+fastapi
+psycopg2-binary==2.9.9
+PyMuPDF==1.24.9
+spacy en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.7.1/en_core_web_sm-3.7.1-py3-none-any.whl
+boto3

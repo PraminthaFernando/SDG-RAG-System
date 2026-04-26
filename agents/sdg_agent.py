@@ -14,17 +14,11 @@ class SDGAgent:
             max_tokens=4096
         )
         
-        if web_tool:
-            self.tools = [fetch_verified_url]
-            self.agent = create_agent(
-                model=self.llm,
-                tools=self.tools
-            )
-        
-        else :
-            self.agent = create_agent(
-                model=self.llm
-            )
+        self.tools = [fetch_verified_url] if web_tool else None
+        self.agent = create_agent(
+            model=self.llm,
+            tools=self.tools
+        )
 
     def run(self, question: str):
         return self.agent.invoke({"messages": [{"role": "user", "content": question}]})

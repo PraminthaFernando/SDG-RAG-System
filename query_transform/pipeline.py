@@ -52,7 +52,7 @@ class QueryTransformationPipeline:
         t = time.time()
 
         try:
-            sub_answers, evidences = self.executor.execute(subqueries, pid)
+            context, evidences = self.executor.execute(subqueries, pid)
             print(f"✅ [EXECUTE] Done ({round(time.time()-t, 2)}s)")
         except Exception as e:
             print(f"❌ [EXECUTE ERROR] {str(e)}")
@@ -71,7 +71,7 @@ class QueryTransformationPipeline:
         t = time.time()
 
         try:
-            final_answer = self.aggregator.aggregate(query, sub_answers, description)
+            final_answer = self.aggregator.aggregate(query, context, description)
             print(f"✅ [AGGREGATE] Done ({round(time.time()-t, 2)}s)")
         except Exception as e:
             print(f"❌ [AGGREGATE ERROR] {str(e)}")
@@ -83,19 +83,11 @@ class QueryTransformationPipeline:
         print("📦 [PARSE] Parsing final output...")
         t = time.time()
 
-        try:
-            content = final_answer["messages"][-1].content
-            content = content.replace("```json", "").replace("```", "").strip()
-            parsed = json.loads(content)
-        except Exception as e:
-            print(f"❌ [PARSE ERROR] {str(e)}")
-            return {}
-
-        parsed["evidences"] = evidences
+        final_answer["evidences"] = evidences
 
         print(f"✅ [PARSE] Done ({round(time.time()-t, 2)}s)")
 
         print(f"⏱ [PIPELINE TOTAL] {round(time.time()-total_start, 2)}s")
         print("🎯 [PIPELINE] END\n")
 
-        return parsed
+        return final_answer
