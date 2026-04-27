@@ -152,9 +152,11 @@ def keyword_filter_top20(docs):
 # =========================================================
 # 🔥 LLM DOC SELECTOR
 # =========================================================
-def llm_select_best_docs(docs, logger: Logger, top_k=10):
+def llm_select_best_docs(docs, logger: Logger, top_k=2):
     try:
         from llm.llm_client import GroqLLMClient
+        import json
+        import re
 
         client = GroqLLMClient()
 
@@ -179,15 +181,65 @@ Select the TOP {top_k} documents that are most likely to contain:
 Documents:
 {doc_list}
 
-Return ONLY a JSON array of selected document names.
+Return STRICTLY a JSON array of document names.
+NO explanations. NO markdown. ONLY JSON.
+
+Example:
+["doc1.pdf", "doc2.pdf"]
 """
 
         response = client.invoke(prompt)
 
-        import json
-        selected_names = json.loads(response)
+        print("🔍 RAW LLM RESPONSE:", repr(response))
 
+        # ---------------------------------------------------
+        # 🔥 STEP 1: Handle empty response
+        # ---------------------------------------------------
+        if not response or not response.strip():
+            logger.error("⚠️ Empty LLM response")
+            return docs[:top_k]
+
+        cleaned = response.strip()
+
+        # ---------------------------------------------------
+        # 🔥 STEP 2: Remove markdown (```json ... ```)
+        # ---------------------------------------------------
+        if cleaned.startswith("```"):
+            parts = cleaned.split("```")
+            if len(parts) >= 2:
+                cleaned = parts[1]
+            cleaned = cleaned.replace("json", "", 1).strip()
+
+        # ---------------------------------------------------
+        # 🔥 STEP 3: Try direct JSON parse
+        # ---------------------------------------------------
+        try:
+            selected_names = json.loads(cleaned)
+
+        except Exception:
+            # ---------------------------------------------------
+            # 🔥 STEP 4: Extract JSON array via regex
+            # ---------------------------------------------------
+            match = re.search(r"\[.*\]", cleaned, re.DOTALL)
+
+            if match:
+                try:
+                    selected_names = json.loads(match.group(0))
+                except Exception:
+                    logger.error(f"⚠️ JSON extraction failed: {cleaned}")
+                    return docs[:top_k]
+            else:
+                logger.error(f"⚠️ No JSON found in response: {cleaned}")
+                return docs[:top_k]
+
+        # ---------------------------------------------------
+        # 🔥 STEP 5: Filter valid docs
+        # ---------------------------------------------------
         selected = [d for d in docs if d["documentName"] in selected_names]
+
+        if not selected:
+            logger.warning("⚠️ LLM returned names not matching docs → fallback")
+            return docs[:top_k]
 
         logger.info(f"🤖 LLM selected {len(selected)} documents")
 
@@ -195,11 +247,7 @@ Return ONLY a JSON array of selected document names.
 
     except Exception as e:
         logger.error(f"❌ LLM selection failed: {e}")
-
-        # fallback
         return docs[:top_k]
-
-
 # =========================================================
 # 🔥 FINAL SMART SELECTION
 # =========================================================
@@ -217,7 +265,7 @@ def pick_best_docs(grouped, logger: Logger):
     # 🔥 SMALL SET
     if len(all_docs) <= 20:
         logger.info("📌 Using ALL docs for LLM selection")
-        return llm_select_best_docs(all_docs, logger, top_k=10)
+        return llm_select_best_docs(all_docs, logger, top_k=2)
 
     # 🔥 LARGE SET
     logger.info("📌 Large doc set → applying keyword filter")
@@ -226,7 +274,7 @@ def pick_best_docs(grouped, logger: Logger):
 
     logger.info(f"📌 Filtered to {len(filtered)} docs → sending to LLM")
 
-    return llm_select_best_docs(filtered, logger, top_k=10)
+    return llm_select_best_docs(filtered, logger, top_k=2)
 
 
 # =========================================================

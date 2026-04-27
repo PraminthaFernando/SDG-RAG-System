@@ -196,6 +196,7 @@ async def process_project_with_progress(base_path, proj, workers, logger, store,
 # 🔥 CLI
 # =========================================================
 if __name__ == "__main__":
+    print("STARTING SCRIPT")
     parser = argparse.ArgumentParser()
     parser.add_argument("--project", required=True)
     parser.add_argument("--workers", type=int, default=2)
