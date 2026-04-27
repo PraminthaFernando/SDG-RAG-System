@@ -7,9 +7,9 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_groq import ChatGroq
 
 from .base_llm import BaseLLM
-from .config import LLM_MODEL_NAME
 from dotenv import load_dotenv
 load_dotenv()
+
 
 class GroqLLMClient(BaseLLM):
     def __init__(self, temperature: float = 0.0):
@@ -27,6 +27,13 @@ class GroqLLMClient(BaseLLM):
             max_retries=3
         )
 
+    # 🔥 BACKWARD COMPATIBILITY FIX
+    def invoke(self, prompt):
+        """
+        Supports old code that calls llm.invoke(...)
+        """
+        return self.generate(prompt=prompt)
+
     def generate(
         self,
         prompt: Optional[str] = None,
@@ -34,8 +41,9 @@ class GroqLLMClient(BaseLLM):
         user_prompt: Optional[str] = None
     ) -> str:
 
+        chain = self.model | StrOutputParser()
+
         if prompt is not None:
-            chain = self.model | StrOutputParser()
             return chain.invoke(prompt)
 
         messages = []
@@ -46,7 +54,6 @@ class GroqLLMClient(BaseLLM):
         if user_prompt:
             messages.append(HumanMessage(content=user_prompt))
 
-        chain = self.model | StrOutputParser()
         return chain.invoke(messages)
 
     def generate_structured(
@@ -58,9 +65,11 @@ class GroqLLMClient(BaseLLM):
     ) -> BaseModel:
 
         max_attempts = 3
+
         for attempt in range(max_attempts):
             try:
                 messages = []
+
                 if system_prompt:
                     messages.append(SystemMessage(content=system_prompt))
 
@@ -73,7 +82,7 @@ class GroqLLMClient(BaseLLM):
                 response = self.model.invoke(messages)
                 content = response.content.strip()
 
-                # Remove markdown wrappers if model adds them
+                # Clean markdown JSON wrappers
                 content = content.replace("```json", "").replace("```", "").strip()
 
                 parsed = json.loads(content)
