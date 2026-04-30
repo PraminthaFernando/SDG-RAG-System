@@ -152,7 +152,7 @@ def keyword_filter_top20(docs):
 # =========================================================
 # 🔥 LLM DOC SELECTOR
 # =========================================================
-def llm_select_best_docs(docs, logger: Logger, top_k=2):
+def llm_select_best_docs(docs, logger: Logger, top_k=1):
     try:
         from llm.llm_client import GroqLLMClient
         import json
@@ -265,7 +265,7 @@ def pick_best_docs(grouped, logger: Logger):
     # 🔥 SMALL SET
     if len(all_docs) <= 20:
         logger.info("📌 Using ALL docs for LLM selection")
-        return llm_select_best_docs(all_docs, logger, top_k=2)
+        return llm_select_best_docs(all_docs, logger, top_k=1)
 
     # 🔥 LARGE SET
     logger.info("📌 Large doc set → applying keyword filter")
@@ -274,7 +274,7 @@ def pick_best_docs(grouped, logger: Logger):
 
     logger.info(f"📌 Filtered to {len(filtered)} docs → sending to LLM")
 
-    return llm_select_best_docs(filtered, logger, top_k=2)
+    return llm_select_best_docs(filtered, logger, top_k=1)
 
 
 # =========================================================
