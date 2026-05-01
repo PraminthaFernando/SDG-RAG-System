@@ -222,11 +222,18 @@ async def run_agent_with_progress(project_id, embedding, send_update):
 
     from RDS.crud_llm import upsert_llm_result
 
+    from sqlalchemy import text
+
     db = SessionLocal()
     try:
+        # 🔥 keep connection alive / reconnect if dead
+        db.execute(text("SELECT 1"))
+
         upsert_llm_result(db, project_id, results)
+
     except Exception as e:
         print(f"[{project_id}] ❌ Failed to store LLM results: {e}")
+
     finally:
         db.close()
 
@@ -314,7 +321,14 @@ async def run_agent_with_progress(project_id, embedding, send_update):
 
     db = SessionLocal()
     try:
+        # 🔥 prevent stale connection crash
+        db.execute(text("SELECT 1"))
+
         upsert_full_score(db, project_id, final_output)
+
+    except Exception as e:
+        print(f"[{project_id}] ❌ Failed to store score: {e}")
+
     finally:
         db.close()
 
