@@ -13,4 +13,10 @@ Instructions:
 - Do not add any new information beyond the provided result.
 
 Output:
-- A short paragraph that a non-expert can easily understand.
+- A JSON response as follows with a short paragraph that a non-expert can easily understand as a summary.
+
+JSON response:
+
+{{
+    "summary": "..."
+}}

@@ -44,4 +44,4 @@ class JudgeAgent(BaseAgent):
     def get_summary(self, prompt: str) -> dict:
         raw = self.invoke(prompt)
         result = self.parse_llm_output(raw, Summary)
-        return result
+        return result["summary"]

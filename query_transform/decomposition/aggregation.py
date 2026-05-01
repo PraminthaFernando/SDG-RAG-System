@@ -11,5 +11,4 @@ class AnswerAggregator:
     def aggregate(self, original_query, evidences, context) -> dict:
         
         evidences = "\n\n".join(evidences)
-
         return self.board.run(original_query, evidences, context)

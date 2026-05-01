@@ -116,8 +116,8 @@ class SDGJudgingBoard:
 
         return self._final_output(
             best_score,
-            best_confidence,
-            best_results
+            best_results,
+            best_confidence
         )
 
     def _final_output(self, score, results, confident):
