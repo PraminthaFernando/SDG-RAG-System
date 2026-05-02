@@ -281,7 +281,7 @@ async def start_ingestion(project_id: str, background_tasks: BackgroundTasks):
             await process_project_with_progress(
                 base_path=Path("temp"),
                 proj=project_id,
-                workers=2,
+                workers=4,
                 logger=logger,
                 store=store,
                 send_update=send_update

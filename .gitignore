@@ -14,3 +14,4 @@ __pycache__/
 volumes/
 venv/
 dev-sav-env/
+dev-sav-env-gpu/

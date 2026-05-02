@@ -5,15 +5,21 @@ Input:
 - Evaluation Results: {result}
 
 Instructions:
-- Write a clear, simple, and user-friendly summary.
-- Avoid technical jargon and complex terms.
-- Explain what the score means in plain language.
-- Highlight the key reason for the score.
-- Keep it concise (2–4 sentences).
-- Do not add any new information beyond the provided result.
+
+- Write a clear, simple, and user-friendly summary
+- Use plain language that a non-expert can easily understand
+- Avoid technical jargon and complex terms
+- Explain what the score means in practical terms
+- Highlight the main reason behind the score
+- If the evidence shows partial or indirect impact, explain it clearly
+- If Score = 2, you MUST explicitly include the quantitative data (numbers, percentages, or measurements) in the summary
+- Keep it concise (2–4 sentences)
+- Do NOT add any new information beyond the provided result
+- Focus on real-world meaning rather than technical wording
 
 Output:
-- A JSON response as follows with a short paragraph that a non-expert can easily understand as a summary.
+
+- A JSON response as follows with a short paragraph that is easy to read and understand
 
 JSON response:
 

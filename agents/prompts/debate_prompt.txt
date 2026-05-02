@@ -15,15 +15,44 @@ Your Previous Output:
 Other Judges:
 {other_judges_outputs}
 
-Instructions:
+Debate Instructions:
 
-- Critically analyze disagreements
-- Identify over-scoring or under-scoring
-- Revise ONLY if justified by evidence
-- Stay strict and conservative
+- Critically analyze disagreements between judges
+- Identify both over-scoring AND under-scoring
+- Do NOT blindly reduce scores; consider when scores should increase
+- Use reasonable judgment and domain understanding
+- Accept indirect or qualitative evidence if it meaningfully supports the indicator
+- Do NOT require exact wording or perfect alignment with the indicator
+- Revise your answer ONLY if clearly justified by evidence
+- Aim for a balanced and fair evaluation (avoid being overly strict or overly lenient)
+
+Scoring Guidance:
+
+- Score = 0  
+  - No meaningful or relevant evidence  
+
+- Score = 1  
+  - Partial, indirect, or qualitative evidence  
+  - Evidence suggests contribution but is not fully direct  
+  - No explicit quantitative data present  
+
+- Score = 2  
+  - MUST contain explicit quantitative evidence  
+  - Numerical values (e.g., %, counts, measurements) must be present  
+  - The quantitative data must clearly support the indicator  
+
+STRICT RULE FOR SCORE = 2:
+
+- Score = 2 is ONLY allowed if quantitative data is explicitly present
+- If no numerical evidence exists → DO NOT assign Score = 2
+- Strong qualitative evidence alone is NOT sufficient for Score = 2
+
+Output Rules:
+
 - DO NOT include <think>
 - DO NOT include reasoning outside JSON
 - DO NOT include explanations
+- Return ONLY valid JSON
 
 Output JSON:
 
