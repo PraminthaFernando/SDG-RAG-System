@@ -25,7 +25,6 @@ s3 = boto3.client(
 
 BUCKET = os.getenv("AWS_BUCKET_NAME")
 
-
 # =========================================================
 # 🔥 CORS
 # =========================================================
@@ -37,14 +36,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 # =========================================================
 # 🔥 ROOT
 # =========================================================
 @app.get("/")
 def root():
     return {"message": "API is running 🚀"}
-
 
 # =========================================================
 # 🔥 HELPER: DETECT SOURCE
@@ -55,7 +52,6 @@ def detect_source(project_id: str):
     if project_id.startswith("GS_"):
         return "gs"
     return None
-
 
 # =========================================================
 # 🔥 METADATA
@@ -87,16 +83,14 @@ def get_project_metadata(project_id: str):
     finally:
         db.close()
 
-
 # =========================================================
-# 🔥 NEW: LLM SIGNED URL ENDPOINT
+# 🔥 LLM SIGNED URL
 # =========================================================
 @app.get("/project/{project_id}/llm-url")
 def get_llm_signed_url(project_id: str):
 
     db = SessionLocal()
     try:
-        # 🔥 Get S3 key from DB
         result = db.execute(text("""
             SELECT s3_path
             FROM project_llm_results
@@ -108,7 +102,6 @@ def get_llm_signed_url(project_id: str):
 
         s3_key = result[0]
 
-        # 🔥 Generate signed URL (valid 5 mins)
         url = s3.generate_presigned_url(
             "get_object",
             Params={
@@ -123,9 +116,8 @@ def get_llm_signed_url(project_id: str):
     finally:
         db.close()
 
-
 # =========================================================
-# 🔥 SCORE
+# 🔥 SCORE (SINGLE PROJECT)
 # =========================================================
 @app.get("/project/{project_id}/score")
 def get_project_score(project_id: str):
@@ -141,9 +133,8 @@ def get_project_score(project_id: str):
     finally:
         db.close()
 
-
 # =========================================================
-# 🔥 LIST VERRA PROJECTS
+# 🔥 LIST VERRA PROJECTS (WITH SCORE)
 # =========================================================
 @app.get("/projects/verra")
 def list_verra_projects():
@@ -151,13 +142,20 @@ def list_verra_projects():
     try:
         result = db.execute(text("""
             SELECT 
-                project_id,
-                project_name,
-                project_status,
-                project_category,
-                annual_emission_reduction
-            FROM verra_metadata
-            ORDER BY created_at DESC
+                vm.project_id,
+                vm.project_name,
+                vm.project_status,
+                vm.project_category,
+                vm.annual_emission_reduction,
+
+                ps.sector,
+                ps.final_score
+
+            FROM verra_metadata vm
+            LEFT JOIN project_scores ps
+                ON vm.project_id = ps.project_id
+
+            ORDER BY vm.created_at DESC
         """))
 
         rows = result.mappings().all()
@@ -168,7 +166,10 @@ def list_verra_projects():
                 "name": r["project_name"],
                 "status": r["project_status"],
                 "category": r["project_category"],
-                "credits": r["annual_emission_reduction"]
+                "credits": r["annual_emission_reduction"],
+
+                "sector": r["sector"],
+                "score": r["final_score"]
             }
             for r in rows
         ]
@@ -176,9 +177,8 @@ def list_verra_projects():
     finally:
         db.close()
 
-
 # =========================================================
-# 🔥 LIST GS PROJECTS
+# 🔥 LIST GS PROJECTS (WITH SCORE)
 # =========================================================
 @app.get("/projects/gs")
 def list_gs_projects():
@@ -186,13 +186,20 @@ def list_gs_projects():
     try:
         result = db.execute(text("""
             SELECT 
-                project_id,
-                project_name,
-                project_status,
-                project_type,
-                annual_credits
-            FROM gs_metadata
-            ORDER BY created_at DESC
+                gm.project_id,
+                gm.project_name,
+                gm.project_status,
+                gm.project_type,
+                gm.annual_credits,
+
+                ps.sector,
+                ps.final_score
+
+            FROM gs_metadata gm
+            LEFT JOIN project_scores ps
+                ON gm.project_id = ps.project_id
+
+            ORDER BY gm.created_at DESC
         """))
 
         rows = result.mappings().all()
@@ -203,7 +210,10 @@ def list_gs_projects():
                 "name": r["project_name"],
                 "status": r["project_status"],
                 "category": r["project_type"],
-                "credits": r["annual_credits"]
+                "credits": r["annual_credits"],
+
+                "sector": r["sector"],
+                "score": r["final_score"]
             }
             for r in rows
         ]
@@ -211,12 +221,10 @@ def list_gs_projects():
     finally:
         db.close()
 
-
 # =========================================================
 # 🔥 WEBSOCKET MANAGER
 # =========================================================
 connections = {}
-
 
 async def send_update(project_id: str, step: str, status: str = "running"):
     if project_id not in connections:
@@ -236,7 +244,6 @@ async def send_update(project_id: str, step: str, status: str = "running"):
     for ws in dead:
         connections[project_id].remove(ws)
 
-
 # =========================================================
 # 🔥 WEBSOCKET
 # =========================================================
@@ -250,7 +257,6 @@ async def websocket_endpoint(websocket: WebSocket, project_id: str):
             await websocket.receive_text()
     except WebSocketDisconnect:
         connections[project_id].remove(websocket)
-
 
 # =========================================================
 # 🔥 START PIPELINE
@@ -281,7 +287,7 @@ async def start_ingestion(project_id: str, background_tasks: BackgroundTasks):
             await process_project_with_progress(
                 base_path=Path("temp"),
                 proj=project_id,
-                workers=2,
+                workers=4,
                 logger=logger,
                 store=store,
                 send_update=send_update
