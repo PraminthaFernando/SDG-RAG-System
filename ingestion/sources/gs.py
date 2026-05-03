@@ -50,28 +50,13 @@ def fetch_gs_metadata(pid: str, logger: Logger):
             "project_id": pid,
             "gs_project_numeric_id": numeric_id,
             "sustaincert_id": data.get("sustaincert_id"),
-            "sustaincert_url": data.get("sustaincert_url"),
             "project_name": data.get("name"),
             "description": data.get("description"),
             "project_status": data.get("status"),
-            "standard": data.get("gsf_standards_version"),
-            "project_type": data.get("type"),
-            "project_size": data.get("size"),
-            "methodology": data.get("methodology"),
-            "project_developer": data.get("project_developer"),
             "country": data.get("country"),
-            "country_code": data.get("country_code"),
-            "state": data.get("state"),
             "latitude": data.get("latitude"),
             "longitude": data.get("longitude"),
             "annual_credits": data.get("estimated_annual_credits"),
-            "carbon_stream": data.get("carbon_stream"),
-            "crediting_start_date": data.get("crediting_period_start_date"),
-            "crediting_end_date": data.get("crediting_period_end_date"),
-            "programme_of_activities": data.get("programme_of_activities"),
-            "poa_project_id": data.get("poa_project_id"),
-            "poa_project_sustaincert_id": data.get("poa_project_sustaincert_id"),
-            "corsia_eligible": data.get("has_corsia_eligible_credits"),
             "sdgs": data.get("sustainable_development_goals"),
         }
 
@@ -137,11 +122,56 @@ def extract_documents(gs_data):
 
 
 # =========================================================
-# 🔥 CLEAN
+# 🔥 TEXT NORMALIZATION
+# =========================================================
+def normalize_text(text: str):
+    import re
+    from urllib.parse import unquote
+
+    text = unquote(text or "")
+    text = text.lower()
+
+    text = re.sub(r"[+_\-]", " ", text)
+    text = re.sub(r"[^a-z0-9\s]", " ", text)
+    text = re.sub(r"\s+", " ", text).strip()
+
+    return text
+
+
+# =========================================================
+# 🔥 FUZZY MATCH HELPERS
+# =========================================================
+def is_annual_report(text):
+    import re
+    return bool(re.search(r"annu\w*\s+report", text))
+
+
+def is_monitoring(text):
+    import re
+    return bool(re.search(r"monitor\w*", text))
+
+
+def is_perfcert(text):
+    import re
+    return bool(re.search(r"(performance\s+certification|perfcert|fvr)", text))
+
+
+def is_verification(text):
+    import re
+    return bool(re.search(r"verif\w*", text))
+
+
+def is_pdd(text):
+    import re
+    return bool(re.search(r"(pdd|project\s+design)", text))
+
+
+# =========================================================
+# 🔥 CLEAN (FIXED)
 # =========================================================
 def is_noise(doc):
-    name = (doc.get("documentName") or "").lower()
-    return any(k in name for k in ["draft", "summary", "kml", "agreement", "annex"])
+    name = normalize_text(doc.get("documentName") or "")
+    return any(k in name for k in ["draft", "summary", "kml", "agreement"])
 
 
 def clean_docs(docs):
@@ -149,48 +179,126 @@ def clean_docs(docs):
 
 
 # =========================================================
-# 🔥 KEYWORD FILTER
+# 🔥 SMART SCORING FILTER
 # =========================================================
 def keyword_filter_top20(docs):
-    keywords = [
-        "monitor", "verification", "pdd",
-        "impact", "sdg", "report",
-        "emission", "benefit"
-    ]
+    from datetime import datetime
+
+    def parse_date(d):
+        try:
+            return datetime.fromisoformat(d.replace("Z", ""))
+        except:
+            return datetime.min
 
     def score(doc):
-        text = ((doc.get("documentName") or "") + " " +
-                (doc.get("documentType") or "")).lower()
-        return sum(1 for k in keywords if k in text)
+        text = normalize_text(
+            (doc.get("documentName") or "") + " " +
+            (doc.get("documentType") or "")
+        )
 
-    return sorted(docs, key=score, reverse=True)[:20]
+        s = 0
+
+        if is_monitoring(text):
+            s += 50
+
+        if is_annual_report(text):
+            s += 45
+
+        if is_perfcert(text):
+            s += 45
+
+        if is_verification(text):
+            s += 30
+
+        if is_pdd(text):
+            s += 15
+
+        if "validation" in text:
+            s += 5
+
+        if any(k in text for k in ["sdg", "impact", "benefit", "community", "livelihood"]):
+            s += 10
+
+        date = parse_date(doc.get("uploadDate", ""))
+        s += int(date.timestamp() / 1e9)
+
+        return s
+
+    ranked = sorted(docs, key=score, reverse=True)
+    return ranked[:20]
 
 
 # =========================================================
-# 🔥 LLM SELECTION
+# 🔥 STRICT LLM SELECTION
 # =========================================================
 def llm_select_best_docs(docs, logger: Logger, top_k=5):
     try:
         from llm.llm_client import GroqLLMClient
         import json
+        import re
 
         client = GroqLLMClient()
 
+        doc_list = [
+            {"name": d.get("documentName"), "date": d.get("uploadDate")}
+            for d in docs
+        ]
+
         prompt = f"""
-Select TOP {top_k} documents best for SDG impact evidence.
+Select EXACTLY {top_k} documents for SDG impact evaluation.
+
+Priority:
+1. Monitoring Reports
+2. Annual Reports
+3. Performance Certification Reports
+4. Verification Reports
+5. PDD
+Avoid validation unless necessary.
 
 Documents:
-{[d['documentName'] for d in docs]}
+{doc_list}
 
-Return ONLY JSON array of names.
+Return ONLY JSON array of EXACTLY {top_k} names.
 """
 
-        res = client.invoke(prompt)
-        selected_names = json.loads(res)
+        response = client.invoke(prompt)
 
-        selected = [d for d in docs if d["documentName"] in selected_names]
+        if not response:
+            raise ValueError("Empty LLM response")
 
-        logger.info(f"🤖 LLM selected {len(selected)} docs")
+        cleaned = response.strip()
+
+        if cleaned.startswith("```"):
+            cleaned = cleaned.split("```")[1].replace("json", "").strip()
+
+        try:
+            selected_names = json.loads(cleaned)
+        except:
+            match = re.search(r"\[.*\]", cleaned, re.DOTALL)
+            if match:
+                selected_names = json.loads(match.group(0))
+            else:
+                raise
+
+        selected = []
+        seen = set()
+
+        for name in selected_names:
+            for d in docs:
+                if d["documentName"] == name and name not in seen:
+                    selected.append(d)
+                    seen.add(name)
+                    break
+
+        if len(selected) < top_k:
+            for d in docs:
+                if d["documentName"] not in seen:
+                    selected.append(d)
+                    seen.add(d["documentName"])
+                if len(selected) == top_k:
+                    break
+
+        selected = selected[:top_k]
 
         return selected
 
@@ -200,7 +308,7 @@ Return ONLY JSON array of names.
 
 
 # =========================================================
-# 🔥 FINAL SELECTION LOGIC
+# 🔥 FINAL SELECTION
 # =========================================================
 def pick_best_docs(docs, logger: Logger):
 
@@ -217,7 +325,7 @@ def pick_best_docs(docs, logger: Logger):
 
 
 # =========================================================
-# 🔥 MAIN ENTRY FUNCTION
+# 🔥 MAIN ENTRY
 # =========================================================
 def process_gs_project(pid: str, logger: Logger, send_update=None):
 

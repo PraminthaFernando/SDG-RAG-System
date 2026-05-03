@@ -11,22 +11,46 @@ Intermediate Evidence-Based Answers:
 Retrieved Context:
 {context}
 
-Strict Evaluation Instructions:
+Flexible Evaluation Instructions:
 
-- Evaluate ONLY the evidence explicitly stated in the Intermediate Answers and Context.
-- Do NOT introduce new interpretations, assumptions, or external knowledge.
-- Do NOT re-retrieve or infer missing data.
-- If evidence is weak, indirect, or incomplete, treat it conservatively.
-- If the evidence does not directly measure the indicator variable, assign Score = 0 even if the topic appears related.
-- If evidence is relevant but qualitative only, assign Score = 1.
-- Assign Score = 2 ONLY if the evidence contains explicit quantitative data that directly measures or clearly supports the indicator.
+- Evaluate primarily based on the provided Intermediate Answers and Context.
+- You MAY use reasonable interpretation and domain understanding where appropriate.
+- Evidence does NOT need to exactly match the indicator wording.
+- Indirect or proxy evidence is acceptable if it clearly contributes to the indicator outcome.
+- Do NOT introduce completely unrelated assumptions or external data.
+- If evidence shows meaningful contribution toward the indicator, treat it as valid.
+- Avoid being overly strict, but stay grounded in the actual evidence.
+
+Scoring Guidelines:
+
+- Score = 0  
+  - No relevant evidence OR completely unrelated  
+  - No clear indication of contribution to the indicator  
+
+- Score = 1  
+  - Partial, indirect, or qualitative evidence  
+  - Evidence suggests contribution but lacks measurable quantitative data  
+  - Logical interpretation is allowed  
+
+- Score = 2  
+  - MUST contain explicit quantitative evidence  
+  - Numerical values (e.g., %, counts, income figures, emission reductions, measurements) MUST be present  
+  - The quantitative data must clearly support the indicator  
+
+STRICT RULE FOR SCORE = 2:
+
+- Score = 2 is ONLY allowed if quantitative data is explicitly present
+- If no numerical or measurable data exists → DO NOT assign Score = 2
+- Strong qualitative evidence alone is NOT sufficient for Score = 2
 
 Indicator–Evidence Alignment Rule:
 
-- Explicitly explain whether the evidence satisfies the indicator’s measurement requirement.
-- Only explain evidence directly related to the indicator variable. Ignore unrelated contextual details.
-- If numbers are mentioned but do not measure the indicator variable directly, treat as qualitative (Score = 1).
-- Do not over-score based on loosely related statistics.
+- Explain how the evidence relates to the indicator in practical, real-world terms.
+- Focus on impact rather than strict wording matches.
+- Prefer reasonable interpretation over rigid rejection.
+- If evidence implies improvement toward the indicator, it can be considered valid.
+- Do not ignore meaningful qualitative signals.
+- If Score = 2, explicitly include the quantitative data (numbers) in the summary.
 
 Output Constraints:
 
@@ -37,6 +61,6 @@ Output Constraints:
 JSON Format:
 
 {{
-  "summary": "2–4 concise sentences. Clearly reference document name, page number, and specific qualitative or quantitative data. Explicitly state why the evidence satisfies or fails the measurement requirement.",
+  "summary": "Write a clear, simple, and easy-to-understand explanation (2–4 sentences). Start by stating the score and what it means. Then explain WHY this score was given using the evidence. If Score = 2, explicitly mention the numerical data. Keep it natural, non-technical, and not cluttered.",
   "score": 0
 }}
