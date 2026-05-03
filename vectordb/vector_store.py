@@ -45,12 +45,12 @@ class VectorStore:
         # =========================
         # 🔥 BATCHED EMBEDDING
         # =========================
-        batch_size = 128
+        embed_batch_size = 128
         all_embeddings = []
 
         with _embedding_lock:
-            for i in range(0, len(contents), batch_size):
-                batch = contents[i:i + batch_size]
+            for i in range(0, len(contents), embed_batch_size):
+                batch = contents[i:i + embed_batch_size]
                 print(f"🔄 Embedding batch {i} - {i + len(batch)} / {len(contents)}")
 
                 batch_embeddings = self.embedding_model.embed_documents(batch)
@@ -64,32 +64,52 @@ class VectorStore:
         chunks = [doc["chunk_number"] for doc in documents]
         ids = [doc["id"] for doc in documents]
 
+        if not policy_docs:
+            pids = [doc["pid"] for doc in documents]
+
         # =========================
-        # 🔥 INSERT INTO MILVUS
+        # 🔥 INSERT INTO MILVUS (FIXED)
         # =========================
+        insert_batch_size = 200  # 🔥 SAFE (adjust if needed)
+
         with _store_lock:
 
-            if policy_docs:
-                self.collection.insert([
-                    ids,
-                    documents_names,
-                    pages,
-                    chunks,
-                    contents,
-                    all_embeddings
-                ])
+            total = len(documents)
 
-            else:
-                pids = [doc["pid"] for doc in documents]
+            for i in range(0, total, insert_batch_size):
 
-                self.collection.insert([
-                    ids,
-                    documents_names,
-                    pages,
-                    chunks,
-                    contents,
-                    pids,
-                    all_embeddings
-                ])
+                batch_slice = slice(i, i + insert_batch_size)
 
+                batch_ids = ids[batch_slice]
+                batch_docs = documents_names[batch_slice]
+                batch_pages = pages[batch_slice]
+                batch_chunks = chunks[batch_slice]
+                batch_contents = contents[batch_slice]
+                batch_embeddings = all_embeddings[batch_slice]
+
+                print(f"🚀 Inserting batch {i} - {i + len(batch_ids)}")
+
+                if policy_docs:
+                    self.collection.insert([
+                        batch_ids,
+                        batch_docs,
+                        batch_pages,
+                        batch_chunks,
+                        batch_contents,
+                        batch_embeddings
+                    ])
+                else:
+                    batch_pids = pids[batch_slice]
+
+                    self.collection.insert([
+                        batch_ids,
+                        batch_docs,
+                        batch_pages,
+                        batch_chunks,
+                        batch_contents,
+                        batch_pids,
+                        batch_embeddings
+                    ])
+
+            # flush once after all inserts
             self.collection.flush()

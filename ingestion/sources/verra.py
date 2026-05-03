@@ -127,7 +127,7 @@ def clean_and_group_docs(docs):
 
 
 # =========================================================
-# 🔥 KEYWORD FILTER (FOR LARGE SETS)
+# 🔥 KEYWORD FILTER
 # =========================================================
 def keyword_filter_top20(docs):
     keywords = [
@@ -141,67 +141,97 @@ def keyword_filter_top20(docs):
     def score(doc):
         text = ((doc.get("documentName") or "") + " " +
                 (doc.get("documentType") or "")).lower()
-
         return sum(1 for k in keywords if k in text)
 
     ranked = sorted(docs, key=score, reverse=True)
-
     return ranked[:20]
 
 
 # =========================================================
-# 🔥 LLM DOC SELECTOR
+# 🔥 LLM DOC SELECTOR (STRICT FIXED)
 # =========================================================
-def llm_select_best_docs(docs, logger: Logger, top_k=10):
+def llm_select_best_docs(docs, logger: Logger, top_k=4):
     try:
         from llm.llm_client import GroqLLMClient
+        import json
+        import re
 
         client = GroqLLMClient()
 
         doc_list = [
-            {
-                "name": d.get("documentName"),
-                "date": d.get("uploadDate")
-            }
+            {"name": d.get("documentName"), "date": d.get("uploadDate")}
             for d in docs
         ]
 
         prompt = f"""
-You are selecting the most useful documents for SDG impact analysis.
-
-Select the TOP {top_k} documents that are most likely to contain:
-- SDG impact evidence
-- Monitoring results
-- Verification reports
-- Emission reductions
-- Community or sustainability benefits
+Select EXACTLY {top_k} best documents for SDG analysis.
 
 Documents:
 {doc_list}
 
-Return ONLY a JSON array of selected document names.
+Return ONLY JSON list of EXACTLY {top_k} names.
 """
 
         response = client.invoke(prompt)
 
-        import json
-        selected_names = json.loads(response)
+        if not response or not response.strip():
+            return docs[:top_k]
 
-        selected = [d for d in docs if d["documentName"] in selected_names]
+        cleaned = response.strip()
 
-        logger.info(f"🤖 LLM selected {len(selected)} documents")
+        if cleaned.startswith("```"):
+            cleaned = cleaned.split("```")[1].replace("json", "").strip()
+
+        try:
+            selected_names = json.loads(cleaned)
+        except:
+            match = re.search(r"\[.*\]", cleaned, re.DOTALL)
+            if match:
+                selected_names = json.loads(match.group(0))
+            else:
+                return docs[:top_k]
+
+        # 🔥 STRICT MATCH
+        selected = []
+        seen = set()
+
+        for name in selected_names:
+            for d in docs:
+                if d["documentName"] == name and name not in seen:
+                    selected.append(d)
+                    seen.add(name)
+                    break
+
+        # 🔥 HARD LIMIT
+        selected = selected[:top_k]
+
+        # 🔥 FILL IF MISSING
+        if len(selected) < top_k:
+            for d in docs:
+                if d["documentName"] not in seen:
+                    selected.append(d)
+                if len(selected) >= top_k:
+                    break
+
+                # ====================================================
+        # 🔥 PRETTY PRINT SELECTED DOCS
+        # ====================================================
+        logger.info("📌 ================= SELECTED DOCUMENTS =================")
+
+        for i, d in enumerate(selected, 1):
+            logger.info(f"{i}. {d.get('documentName')} ({d.get('uploadDate')})")
+
+        logger.info("📌 =====================================================")
 
         return selected
 
     except Exception as e:
-        logger.error(f"❌ LLM selection failed: {e}")
-
-        # fallback
+        logger.error(f"LLM selection failed: {e}")
         return docs[:top_k]
 
 
 # =========================================================
-# 🔥 FINAL SMART SELECTION
+# 🔥 FINAL SELECTION
 # =========================================================
 def pick_best_docs(grouped, logger: Logger):
     all_docs = []
@@ -214,23 +244,15 @@ def pick_best_docs(grouped, logger: Logger):
 
     logger.info(f"📄 Total documents found: {len(all_docs)}")
 
-    # 🔥 SMALL SET
     if len(all_docs) <= 20:
-        logger.info("📌 Using ALL docs for LLM selection")
-        return llm_select_best_docs(all_docs, logger, top_k=10)
-
-    # 🔥 LARGE SET
-    logger.info("📌 Large doc set → applying keyword filter")
+        return llm_select_best_docs(all_docs, logger, top_k=4)
 
     filtered = keyword_filter_top20(all_docs)
-
-    logger.info(f"📌 Filtered to {len(filtered)} docs → sending to LLM")
-
-    return llm_select_best_docs(filtered, logger, top_k=10)
+    return llm_select_best_docs(filtered, logger, top_k=4)
 
 
 # =========================================================
-# 🔥 MAIN ENTRY FUNCTION
+# 🔥 MAIN ENTRY
 # =========================================================
 def process_verra_project(pid: str, logger: Logger):
 
@@ -239,7 +261,6 @@ def process_verra_project(pid: str, logger: Logger):
     docs = extract_documents(document_groups)
     grouped = clean_and_group_docs(docs)
 
-    # 🔥 UPDATED LINE
     selected = pick_best_docs(grouped, logger)
 
     return metadata, selected
