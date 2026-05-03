@@ -8,12 +8,14 @@ class AnswerAggregator:
             "query_transform/prompts/aggregation_prompt.txt"
         ).read_text()
 
-    def aggregate(self, original_query, sub_answers, context) -> dict:
+    def aggregate(self, stepback_query, blocks, original_query) -> dict:
+
+        evidences = "\n\n".join(blocks)
 
         prompt = self.prompt_template.format(
             original_query=original_query,
-            combined=sub_answers,
-            context=context
+            stepback_query=stepback_query,
+            evidences=evidences,
         )
 
         return self.agent.run(prompt)

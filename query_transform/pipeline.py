@@ -52,7 +52,7 @@ class QueryTransformationPipeline:
         t = time.time()
 
         try:
-            sub_answers, evidences = self.executor.execute(subqueries, pid)
+            context_blocks, evidences = self.executor.execute(subqueries, pid)
             print(f"✅ [EXECUTE] Done ({round(time.time()-t, 2)}s)")
         except Exception as e:
             print(f"❌ [EXECUTE ERROR] {str(e)}")
@@ -71,7 +71,7 @@ class QueryTransformationPipeline:
         t = time.time()
 
         try:
-            final_answer = self.aggregator.aggregate(query, sub_answers, description)
+            final_answer = self.aggregator.aggregate(query, context_blocks, description)
             print(f"✅ [AGGREGATE] Done ({round(time.time()-t, 2)}s)")
         except Exception as e:
             print(f"❌ [AGGREGATE ERROR] {str(e)}")

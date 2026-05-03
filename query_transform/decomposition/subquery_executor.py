@@ -14,7 +14,6 @@ class SubqueryExecutor:
         return f"Question: {question}\nAnswer: {answer}"
 
     def execute(self, subqueries, pid) -> Tuple[str, Dict]:
-        q_a_pairs = ""
         evidences = {}
 
         for q in subqueries:
@@ -29,8 +28,15 @@ class SubqueryExecutor:
                 
             evidences[q] = []
             context_blocks = []
+            seen_chunks = set()
             
             for r in retrieved:
+                chunk_id = r.get("chunk_number")
+                
+                if chunk_id in seen_chunks:
+                    continue
+                seen_chunks.add(chunk_id)
+                
                 data = {
                     "similarity_score": r["score"],
                     "pid": r["pid"],
@@ -44,21 +50,5 @@ class SubqueryExecutor:
                 context_blocks.append(
                     f"[Document: {r['document']} | Page: {r['page_number']}]\n{r['content']}"
                 )
-                
-            context = "\n\n".join(context_blocks)
-            prompt = self.prompt_template.format(
-                q_a_pairs=q_a_pairs,
-                q=q,
-                context=context
-            )
 
-            answer = self.llm.generate(prompt=prompt)
-
-            formatted_pair = self.format_qa_pair(q, answer)
-
-            if q_a_pairs:
-                q_a_pairs += "\n---\n" + formatted_pair
-            else:
-                q_a_pairs = formatted_pair
-
-        return (q_a_pairs, evidences)
+        return (context_blocks, evidences)
