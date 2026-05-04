@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 
 # =========================================================
-# 🔥 FETCH VERRA CATEGORY
+# 🔥 FETCH VERRA CATEGORY (UNCHANGED)
 # =========================================================
 def get_verra_category(db: Session, project_id: str):
 
@@ -21,13 +21,13 @@ def get_verra_category(db: Session, project_id: str):
 
 
 # =========================================================
-# 🔥 FETCH GS PROJECT TYPE
+# 🔥 FETCH GS PROJECT NAME (NEW)
 # =========================================================
-def get_gs_project_type(db: Session, project_id: str):
+def get_gs_project_name(db: Session, project_id: str):
 
     result = db.execute(
         text("""
-            SELECT project_type
+            SELECT project_name
             FROM gs_metadata
             WHERE project_id = :pid
         """),
@@ -39,7 +39,7 @@ def get_gs_project_type(db: Session, project_id: str):
 
 
 # =========================================================
-# 🔥 MAP VERRA CATEGORY → SECTOR
+# 🔥 MAP VERRA CATEGORY → SECTOR (UNCHANGED)
 # =========================================================
 def map_verra_category(category: str):
 
@@ -48,7 +48,6 @@ def map_verra_category(category: str):
 
     category = category.strip().lower()
 
-    # 🌳 AFOLU → forestry
     if "agriculture forestry and other land use" in category:
         return "forestry"
 
@@ -59,29 +58,51 @@ def map_verra_category(category: str):
 
 
 # =========================================================
-# 🔥 MAP GS TYPE → SECTOR
+# 🔥 MAP GS NAME → SECTOR (NEW LOGIC)
 # =========================================================
-def map_gs_type(project_type: str):
+def map_gs_name(project_name: str):
 
-    if not project_type:
+    if not project_name:
         return "renewables"
 
-    project_type = project_type.strip().lower()
+    name = project_name.lower()
 
     # 🌳 Forestry keywords
     forestry_keywords = [
-        "forestry",
-        "afforestation",
+        "forest",
         "reforestation",
+        "afforestation",
         "redd",
-        "ifm",
         "arr",
-        "a/r",
-        "land use"
+        "ifm",
+        "natural regeneration",
+        "plantation",
+        "conservation",
+        "arb",
     ]
 
-    if any(k in project_type for k in forestry_keywords):
+    # ⚡ Renewable / energy keywords
+    energy_keywords = [
+        "solar",
+        "wind",
+        "hydro",
+        "power",
+        "energy",
+        "biogas",
+        "methane",
+        "electric",
+        "pv",
+        "generation",
+        "cookstove",
+    ]
+
+    # 🌳 PRIORITY → forestry
+    if any(k in name for k in forestry_keywords):
         return "forestry"
+
+    # ⚡ THEN → renewables
+    if any(k in name for k in energy_keywords):
+        return "renewables"
 
     return "renewables"
 
@@ -92,7 +113,7 @@ def map_gs_type(project_type: str):
 def get_project_sector(db: Session, project_id: str):
 
     # =====================================================
-    # 🔥 VERRA PROJECT
+    # 🔥 VERRA PROJECT (UNCHANGED)
     # =====================================================
     if project_id.startswith("VCS"):
 
@@ -107,17 +128,17 @@ def get_project_sector(db: Session, project_id: str):
         }
 
     # =====================================================
-    # 🔥 GOLD STANDARD PROJECT
+    # 🔥 GOLD STANDARD PROJECT (UPDATED)
     # =====================================================
     elif project_id.startswith("GS"):
 
-        project_type = get_gs_project_type(db, project_id)
-        sector = map_gs_type(project_type)
+        project_name = get_gs_project_name(db, project_id)
+        sector = map_gs_name(project_name)
 
         return {
             "project_id": project_id,
             "source": "gs",
-            "raw_type": project_type,
+            "raw_type": project_name,
             "sector": sector
         }
 

@@ -264,7 +264,7 @@ def keyword_filter_top20(docs):
 # =========================================================
 # 🔥 STRICT LLM SELECTION
 # =========================================================
-def llm_select_best_docs(docs, logger: Logger, top_k=5):
+def llm_select_best_docs(docs, logger: Logger, top_k=4):
     try:
         from llm.llm_client import GroqLLMClient
         import json
