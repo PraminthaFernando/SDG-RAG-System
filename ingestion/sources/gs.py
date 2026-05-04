@@ -47,18 +47,44 @@ def fetch_gs_metadata(pid: str, logger: Logger):
         data = res.json()
 
         metadata = {
-            "project_id": pid,
-            "gs_project_numeric_id": numeric_id,
-            "sustaincert_id": data.get("sustaincert_id"),
-            "project_name": data.get("name"),
-            "description": data.get("description"),
-            "project_status": data.get("status"),
-            "country": data.get("country"),
-            "latitude": data.get("latitude"),
-            "longitude": data.get("longitude"),
-            "annual_credits": data.get("estimated_annual_credits"),
-            "sdgs": data.get("sustainable_development_goals"),
-        }
+        "project_id": pid,
+        "gs_project_numeric_id": numeric_id,
+        "sustaincert_id": data.get("sustaincert_id"),
+
+        "sustaincert_url": f"https://assurance-platform.goldstandard.org/project-documents/GS{data.get('sustaincert_id')}" if data.get("sustaincert_id") else None,
+
+        "project_name": data.get("name"),
+        "description": data.get("description"),
+
+        "project_status": data.get("status"),
+        "standard": data.get("standard") or None,
+
+        "project_type": data.get("project_type") or None,
+        "project_size": data.get("project_size") or None,
+        "methodology": data.get("methodology") or None,
+
+        "project_developer": data.get("project_developer") or None,
+        "country": data.get("country"),
+        "country_code": data.get("country_code") or None,
+        "state": data.get("state") or None,
+
+        "latitude": data.get("latitude"),
+        "longitude": data.get("longitude"),
+
+        "annual_credits": data.get("estimated_annual_credits"),
+        "carbon_stream": data.get("carbon_stream") or None,
+
+        "crediting_start_date": data.get("crediting_start_date") or None,
+        "crediting_end_date": data.get("crediting_end_date") or None,
+
+        "programme_of_activities": data.get("programme_of_activities") or None,
+        "poa_project_id": data.get("poa_project_id") or None,
+        "poa_project_sustaincert_id": data.get("poa_project_sustaincert_id") or None,
+
+        "corsia_eligible": data.get("corsia_eligible") or None,
+
+        "sdgs": data.get("sustainable_development_goals"),
+    }
 
         return metadata, data.get("sustaincert_id")
 
@@ -70,27 +96,34 @@ def fetch_gs_metadata(pid: str, logger: Logger):
 # =========================================================
 # 🔥 FETCH GS DOCUMENTS
 # =========================================================
-def fetch_gs_documents(gsid: str, logger: Logger):
-    try:
-        url = f"https://assurance-platform.goldstandard.org/api/public/project-documents/GS{gsid}"
+import requests
 
-        logger.info(f"[GS{gsid}] 📄 Fetching GS documents...")
+def fetch_gs_documents(gsid: str, logger):
 
-        headers = {
-            **get_headers(),
-            "accept": "*/*",
-            "x-gold-standard-api-version": "2023-04-19"
-        }
+    url = f"https://assurance-platform.goldstandard.org/api/public/project-documents/GS{gsid}"
 
-        res = requests.get(url, headers=headers, timeout=30)
-        res.raise_for_status()
+    logger.info(f"[GS{gsid}] 📄 Fetching GS documents...")
 
-        return res.json()
+    headers = {
+        "accept": "*/*",
+        "accept-language": "en-US,en;q=0.9",
+        "referer": f"https://assurance-platform.goldstandard.org/project-documents/GS{gsid}",
+        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/147 Safari/537.36",
+        "x-gold-standard-api-version": "2023-04-19",
+    }
 
-    except Exception as e:
-        logger.error(f"[GS{gsid}] ❌ GS document fetch failed: {e}")
+    session = requests.Session()
+    session.headers.update(headers)
+
+    res = session.get(url, timeout=30)
+
+    if res.status_code == 403:
+        logger.error(f"[GS{gsid}] ❌ STILL BLOCKED (403)")
         return None
 
+    res.raise_for_status()
+
+    return res.json()
 
 # =========================================================
 # 🔥 EXTRACT DOCUMENTS
