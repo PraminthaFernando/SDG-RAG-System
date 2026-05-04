@@ -1,3 +1,4 @@
+
 import json
 import argparse
 import asyncio
@@ -13,6 +14,10 @@ from scoring.modules.rebuild_master import rebuild_master_criteria
 from scoring.modules.normalize_projects import normalize as normalize_text
 
 from RDS.fetch_type import get_project_sector
+
+# 🔥 NEW IMPORTS
+from sqlalchemy.exc import OperationalError
+from sqlalchemy import text
 
 
 # =========================================================
@@ -153,9 +158,6 @@ async def run_agent_with_progress(project_id, embedding, send_update):
         collection="policy_docs"
     )
 
-    # =========================================================
-    # GET SECTOR
-    # =========================================================
     from RDS.database import SessionLocal
 
     db = SessionLocal()
@@ -167,9 +169,6 @@ async def run_agent_with_progress(project_id, embedding, send_update):
 
     await send_update(project_id, f"Detected sector: {sector}")
 
-    # =========================================================
-    # BUILD MASTER
-    # =========================================================
     rebuild_master_criteria(
         input_file_name="sdg_master_criteria.json",
         output_file_name="sector_master_criteria.json"
@@ -191,11 +190,7 @@ async def run_agent_with_progress(project_id, embedding, send_update):
             loop
         )
 
-    # =========================================================
-    # RUN LLM
-    # =========================================================
-    results = None
-
+    # ================= LLM =================
     try:
         results = await loop.run_in_executor(
             None,
@@ -212,125 +207,124 @@ async def run_agent_with_progress(project_id, embedding, send_update):
         return
 
     if not results:
-        await send_update(project_id, "❌ No LLM results generated", "failed")
-        return
+        raise RuntimeError(f"[{project_id}] ❌ No LLM results generated")
 
-    # =========================================================
-    # SAVE LLM RESULTS (S3)
-    # =========================================================
+    # ================= SAVE LLM =================
     await send_update(project_id, "Saving LLM results (S3 upload)")
 
     from RDS.crud_llm import upsert_llm_result
 
-    from sqlalchemy import text
+    success = False
 
-    db = SessionLocal()
-    try:
-        # 🔥 keep connection alive / reconnect if dead
-        db.execute(text("SELECT 1"))
+    for attempt in range(3):
+        db = SessionLocal()
+        try:
+            db.execute(text("SELECT 1"))
+            upsert_llm_result(db, project_id, results)
+            db.commit()
+            success = True
+            break
 
-        upsert_llm_result(db, project_id, results)
+        except OperationalError as e:
+            print(f"[{project_id}] ⚠️ retry {attempt+1}: {e}")
+            db.rollback()
 
-    except Exception as e:
-        print(f"[{project_id}] ❌ Failed to store LLM results: {e}")
+        except Exception as e:
+            print(f"[{project_id}] ❌ DB write failed: {e}")
+            db.rollback()
+            break
 
-    finally:
-        db.close()
+        finally:
+            db.close()
+
+    if not success:
+        raise RuntimeError(f"[{project_id}] ❌ CRITICAL: Failed to store LLM results")
 
     await send_update(project_id, "LLM processing completed")
 
-    # =========================================================
-    # NORMALIZATION
-    # =========================================================
-    await send_update(project_id, "Normalizing results")
-
-    try:
-        structured = normalize_single_project(results, master, sector=sector)
-    except Exception as e:
-        await send_update(project_id, f"❌ Normalization failed: {str(e)}", "failed")
-        return
-
-    # 🔥 NOW safe to free memory
+    # ================= NORMALIZE =================
+    structured = normalize_single_project(results, master, sector=sector)
     del results
 
-    # =========================================================
-    # SCORING
-    # =========================================================
+    # ================= SCORING =================
     await send_update(project_id, "Calculating final score")
 
-    try:
-        project_data = structured
-        master_sdgs = master["sectors"][sector]["sdgs"]
+    project_data = structured
+    master_sdgs = master["sectors"][sector]["sdgs"]
 
-        sdg_scores = []
-        output_sdgs = {}
+    sdg_scores = []
+    output_sdgs = {}
 
-        for sdg_id, sdg_data in master_sdgs.items():
+    for sdg_id, sdg_data in master_sdgs.items():
 
-            target_scores = []
+        target_scores = []
 
-            for target_id, target_data in sdg_data["targets"].items():
+        for target_id, target_data in sdg_data["targets"].items():
 
-                indicators = target_data["indicators"]
-                total = len(indicators)
+            indicators = target_data["indicators"]
+            total = len(indicators)
 
-                if total == 0:
-                    continue
+            if total == 0:
+                continue
 
-                score_sum = 0
+            score_sum = 0
 
-                for ind_id in indicators.keys():
-                    val = (
-                        project_data.get("sdgs", {})
-                        .get(sdg_id, {})
-                        .get("targets", {})
-                        .get(target_id, {})
-                        .get("indicators", {})
-                        .get(ind_id, {})
-                        .get("score", 0)
-                    )
+            for ind_id in indicators.keys():
+                val = (
+                    project_data.get("sdgs", {})
+                    .get(sdg_id, {})
+                    .get("targets", {})
+                    .get(target_id, {})
+                    .get("indicators", {})
+                    .get(ind_id, {})
+                    .get("score", 0)
+                )
 
-                    score_sum += min(val, 2)
+                score_sum += min(val, 2)
 
-                target_score = score_sum / (2 * total)
-                target_scores.append(target_score)
+            target_scores.append(score_sum / (2 * total))
 
-            sdg_score = sum(target_scores) / len(target_scores) if target_scores else 0
+        sdg_score = sum(target_scores) / len(target_scores) if target_scores else 0
 
-            output_sdgs[sdg_id] = {"score": sdg_score}
-            sdg_scores.append(sdg_score)
+        output_sdgs[sdg_id] = {"score": sdg_score}
+        sdg_scores.append(sdg_score)
 
-        final_score = sum(sdg_scores) / len(sdg_scores) if sdg_scores else 0
+    final_output = {
+        "sector": sector,
+        "final_score": sum(sdg_scores) / len(sdg_scores) if sdg_scores else 0,
+        "sdgs": output_sdgs
+    }
 
-        final_output = {
-            "sector": sector,
-            "final_score": final_score,
-            "sdgs": output_sdgs
-        }
-
-    except Exception as e:
-        await send_update(project_id, f"❌ Scoring failed: {str(e)}", "failed")
-        return
-
-    # =========================================================
-    # SAVE SCORE
-    # =========================================================
+    # ================= SAVE SCORE =================
     await send_update(project_id, "Saving score to database")
 
     from RDS.crud_score import upsert_full_score
 
-    db = SessionLocal()
-    try:
-        # 🔥 prevent stale connection crash
-        db.execute(text("SELECT 1"))
+    success = False
 
-        upsert_full_score(db, project_id, final_output)
+    for attempt in range(3):
+        db = SessionLocal()
+        try:
+            db.execute(text("SELECT 1"))
+            upsert_full_score(db, project_id, final_output)
+            db.commit()
+            success = True
+            break
 
-    except Exception as e:
-        print(f"[{project_id}] ❌ Failed to store score: {e}")
+        except OperationalError as e:
+            print(f"[{project_id}] ⚠️ retry {attempt+1}: {e}")
+            db.rollback()
 
-    finally:
-        db.close()
+        except Exception as e:
+            print(f"[{project_id}] ❌ Score write failed: {e}")
+            db.rollback()
+            break
+
+        finally:
+            db.close()
+
+    if not success:
+        raise RuntimeError(f"[{project_id}] ❌ CRITICAL: Failed to store score")
 
     await send_update(project_id, "Final score saved")
     await send_update(project_id, "SDG analysis completed", "done")

@@ -10,6 +10,11 @@ import os
 from RDS.database import SessionLocal
 from RDS.crud_metadata import get_metadata
 from RDS.crud_score import get_project_score as get_score_from_db
+from RDS.crud_insights import get_forestry_score_distribution, get_forestry_sdg_distribution,get_forestry_summary,get_forestry_sdg_avg,get_forestry_top_projects,get_forestry_emission_vs_score,get_forestry_category_performance
+from fastapi import Depends
+from sqlalchemy.orm import Session
+from RDS.database import get_db
+
 
 app = FastAPI()
 
@@ -82,6 +87,77 @@ def get_project_metadata(project_id: str):
 
     finally:
         db.close()
+
+# =========================================================
+# 🔥 SUMMARY
+# =========================================================
+@app.get("/insights/forestry/summary")
+def forestry_summary(db: Session = Depends(get_db)):
+    return get_forestry_summary(db)
+
+from RDS.crud_insights import get_forestry_map_data
+
+@app.get("/insights/forestry/map")
+def forestry_map():
+    db = SessionLocal()
+    try:
+        data = get_forestry_map_data(db)
+        return data
+    finally:
+        db.close()
+# =========================================================
+# 🔥 SDG AVG
+# =========================================================
+@app.get("/insights/forestry/sdg-average")
+def forestry_sdg_avg(db: Session = Depends(get_db)):
+    return get_forestry_sdg_avg(db)
+
+
+# =========================================================
+# 🔥 TOP PROJECTS
+# =========================================================
+@app.get("/insights/forestry/top-projects")
+def forestry_top_projects(db: Session = Depends(get_db)):
+    return get_forestry_top_projects(db)
+
+
+# =========================================================
+# 🔥 EMISSION VS SCORE
+# =========================================================
+@app.get("/insights/forestry/emission-vs-score")
+def forestry_emission_vs_score(db: Session = Depends(get_db)):
+    return get_forestry_emission_vs_score(db)
+
+
+# =========================================================
+# 🔥 CATEGORY PERFORMANCE
+# =========================================================
+@app.get("/insights/forestry/category-performance")
+def forestry_category_performance(db: Session = Depends(get_db)):
+    return get_forestry_category_performance(db)
+# =========================================================
+# 🔥 FORESTRY INSIGHTS - SCORE DISTRIBUTION
+# =========================================================
+@app.get("/insights/forestry/score-distribution")
+def forestry_score_distribution(db: Session = Depends(get_db)):
+    data = get_forestry_score_distribution(db)
+
+    return {
+        "sector": "forestry",
+        "distribution": data
+    }
+
+# =========================================================
+# 🔥 FORESTRY SDG DISTRIBUTION (PIE)
+# =========================================================
+@app.get("/insights/forestry/sdg-distribution")
+def forestry_sdg_distribution(db: Session = Depends(get_db)):
+    data = get_forestry_sdg_distribution(db)
+
+    return {
+        "sector": "forestry",
+        "distribution": data
+    }
 
 # =========================================================
 # 🔥 LLM SIGNED URL
@@ -311,3 +387,5 @@ async def start_ingestion(project_id: str, background_tasks: BackgroundTasks):
     asyncio.create_task(run_pipeline())
 
     return {"message": f"Pipeline started for {project_id}"}
+
+
