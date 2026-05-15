@@ -57,7 +57,89 @@ def detect_source(project_id: str):
     if project_id.startswith("GS_"):
         return "gs"
     return None
+# =========================================================
+# 🔥 RENEWABLE SUMMARY
+# =========================================================
+from RDS.crud_insights import (
+    get_renewable_score_distribution,
+    get_renewable_sdg_distribution,
+    get_renewable_summary,
+    get_renewable_sdg_avg,
+    get_renewable_top_projects,
+    get_renewable_emission_vs_score,
+    get_renewable_category_performance,
+    get_renewable_map_data
+)
 
+@app.get("/insights/renewable/summary")
+def renewable_summary(db: Session = Depends(get_db)):
+    return get_renewable_summary(db)
+
+
+# =========================================================
+# 🔥 RENEWABLE SCORE DISTRIBUTION
+# =========================================================
+@app.get("/insights/renewable/score-distribution")
+def renewable_score_distribution(db: Session = Depends(get_db)):
+    data = get_renewable_score_distribution(db)
+
+    return {
+        "sector": "renewable",
+        "distribution": data
+    }
+
+
+# =========================================================
+# 🔥 RENEWABLE SDG DISTRIBUTION
+# =========================================================
+@app.get("/insights/renewable/sdg-distribution")
+def renewable_sdg_distribution(db: Session = Depends(get_db)):
+    data = get_renewable_sdg_distribution(db)
+
+    return {
+        "sector": "renewable",
+        "distribution": data
+    }
+
+
+# =========================================================
+# 🔥 RENEWABLE SDG AVERAGE
+# =========================================================
+@app.get("/insights/renewable/sdg-average")
+def renewable_sdg_avg(db: Session = Depends(get_db)):
+    return get_renewable_sdg_avg(db)
+
+
+# =========================================================
+# 🔥 RENEWABLE TOP PROJECTS
+# =========================================================
+@app.get("/insights/renewable/top-projects")
+def renewable_top_projects(db: Session = Depends(get_db)):
+    return get_renewable_top_projects(db)
+
+
+# =========================================================
+# 🔥 RENEWABLE EMISSION VS SCORE
+# =========================================================
+@app.get("/insights/renewable/emission-vs-score")
+def renewable_emission_vs_score(db: Session = Depends(get_db)):
+    return get_renewable_emission_vs_score(db)
+
+
+# =========================================================
+# 🔥 RENEWABLE CATEGORY PERFORMANCE
+# =========================================================
+@app.get("/insights/renewable/category-performance")
+def renewable_category_performance(db: Session = Depends(get_db)):
+    return get_renewable_category_performance(db)
+
+
+# =========================================================
+# 🔥 RENEWABLE MAP
+# =========================================================
+@app.get("/insights/renewable/map")
+def renewable_map(db: Session = Depends(get_db)):
+    return get_renewable_map_data(db)
 # =========================================================
 # 🔥 METADATA
 # =========================================================

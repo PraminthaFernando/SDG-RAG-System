@@ -150,7 +150,7 @@ def keyword_filter_top20(docs):
 # =========================================================
 # 🔥 LLM DOC SELECTOR (STRICT FIXED)
 # =========================================================
-def llm_select_best_docs(docs, logger: Logger, top_k=4):
+def llm_select_best_docs(docs, logger: Logger, top_k=3):
     try:
         from llm.llm_client import GroqLLMClient
         import json
@@ -245,10 +245,10 @@ def pick_best_docs(grouped, logger: Logger):
     logger.info(f"📄 Total documents found: {len(all_docs)}")
 
     if len(all_docs) <= 20:
-        return llm_select_best_docs(all_docs, logger, top_k=4)
+        return llm_select_best_docs(all_docs, logger, top_k=3)
 
     filtered = keyword_filter_top20(all_docs)
-    return llm_select_best_docs(filtered, logger, top_k=4)
+    return llm_select_best_docs(filtered, logger, top_k=3)
 
 
 # =========================================================

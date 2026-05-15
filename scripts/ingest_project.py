@@ -5,6 +5,7 @@ import time
 import asyncio
 import os
 import tempfile
+import sys
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
 from dotenv import load_dotenv
@@ -24,6 +25,9 @@ from ingestion.sources.gs import process_gs_project
 from RDS.database import SessionLocal
 from RDS.crud_docs import replace_project_documents
 
+# 🔥 NEW
+from sqlalchemy.exc import OperationalError
+
 
 # =========================================================
 # 🔥 HELPER LOG
@@ -33,7 +37,7 @@ def log_step(logger, msg):
 
 
 # =========================================================
-# 🔥 DOWNLOAD + PROCESS PDF (SOURCE-AWARE FIX)
+# 🔥 DOWNLOAD + PROCESS PDF
 # =========================================================
 def process_url_temp(doc, pid, pipeline):
     tmp_path = None
@@ -42,13 +46,12 @@ def process_url_temp(doc, pid, pipeline):
         url = doc["uri"]
         filename = doc["documentName"]
 
-        # 🔥 SOURCE-AWARE HEADERS
         if "goldstandard" in url:
             headers = {
                 "accept": "*/*",
                 "accept-language": "en-US,en;q=0.9",
                 "referer": f"https://assurance-platform.goldstandard.org/project-documents/{pid.replace('_','')}",
-                "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/147 Safari/537.36",
+                "user-agent": "Mozilla/5.0",
                 "x-gold-standard-api-version": "2023-04-19"
             }
         else:
@@ -56,14 +59,12 @@ def process_url_temp(doc, pid, pipeline):
 
         res = requests.get(url, headers=headers, timeout=60)
 
-        # 🔥 HANDLE BLOCKED DOCS
         if res.status_code == 403:
             print(f"[{pid}] ⚠️ Skipping restricted document: {filename}")
             return []
 
         res.raise_for_status()
 
-        # 🔥 SAVE TEMP FILE
         tmp_path = os.path.join(
             tempfile.gettempdir(),
             f"{pid}_{int(time.time() * 1000)}.pdf"
@@ -74,7 +75,6 @@ def process_url_temp(doc, pid, pipeline):
 
         time.sleep(0.05)
 
-        # 🔥 INGEST
         document = pipeline.ingest(pid=pid, filename=tmp_path)
 
         return [
@@ -111,7 +111,7 @@ async def process_project_with_progress(base_path, proj, workers, logger, store,
     pipeline = IngestionPipeline(pdf_base_path=tempfile.gettempdir())
 
     # =========================================================
-    # 🔥 FETCH SOURCE DATA
+    # FETCH
     # =========================================================
     await send_update(proj, "Fetching metadata")
 
@@ -120,7 +120,6 @@ async def process_project_with_progress(base_path, proj, workers, logger, store,
         source = "verra"
 
     elif proj.startswith("GS"):
-        # 🔥 FIX: PASS send_update
         metadata, selected = process_gs_project(proj, logger, send_update)
         source = "gs"
 
@@ -130,35 +129,67 @@ async def process_project_with_progress(base_path, proj, workers, logger, store,
     await send_update(proj, "Metadata fetched")
 
     # =========================================================
-    # 🔥 SAVE METADATA
+    # 🔥 SAVE METADATA (FIXED)
     # =========================================================
     if metadata:
+        MAX_RETRIES = 3
+
+        for attempt in range(MAX_RETRIES):
+            db = SessionLocal()
+            try:
+                if source == "verra":
+                    from RDS.crud_metadata import upsert_metadata
+                    upsert_metadata(db, metadata)
+
+                elif source == "gs":
+                    from RDS.crud_metadata_gs import upsert_metadata_gs
+                    upsert_metadata_gs(db, metadata)
+
+                db.commit()
+                break
+
+            except OperationalError as e:
+                print(f"[{proj}] ⚠️ DB error (metadata) attempt {attempt+1}: {e}")
+                db.rollback()
+
+                if attempt == MAX_RETRIES - 1:
+                    print(f"[{proj}] ❌ CRITICAL: DB unreachable. Stopping.")
+                    sys.exit(1)
+
+                time.sleep(3)
+
+            finally:
+                db.close()
+
+    # =========================================================
+    # 🔥 SAVE DOCUMENTS (FIXED)
+    # =========================================================
+    await send_update(proj, "Saving selected documents")
+
+    MAX_RETRIES = 3
+
+    for attempt in range(MAX_RETRIES):
         db = SessionLocal()
         try:
-            if source == "verra":
-                from RDS.crud_metadata import upsert_metadata
-                upsert_metadata(db, metadata)
+            replace_project_documents(db, proj, selected)
+            db.commit()
+            break
 
-            elif source == "gs":
-                from RDS.crud_metadata_gs import upsert_metadata_gs
-                upsert_metadata_gs(db, metadata)
+        except OperationalError as e:
+            print(f"[{proj}] ⚠️ DB error (docs) attempt {attempt+1}: {e}")
+            db.rollback()
+
+            if attempt == MAX_RETRIES - 1:
+                print(f"[{proj}] ❌ CRITICAL: Failed saving documents. Stopping.")
+                sys.exit(1)
+
+            time.sleep(3)
 
         finally:
             db.close()
 
     # =========================================================
-    # 🔥 SAVE DOCUMENTS
-    # =========================================================
-    await send_update(proj, "Saving selected documents")
-
-    db = SessionLocal()
-    try:
-        replace_project_documents(db, proj, selected)
-    finally:
-        db.close()
-
-    # =========================================================
-    # 🔥 PROCESS PDFs
+    # PROCESS PDFs
     # =========================================================
     await send_update(proj, f"Processing {len(selected)} PDFs")
 
@@ -174,13 +205,12 @@ async def process_project_with_progress(base_path, proj, workers, logger, store,
         for i, future in enumerate(asyncio.as_completed(tasks), 1):
             result = await future
             all_docs.extend(result)
-
             await send_update(proj, f"Processed {i}/{len(selected)} PDFs")
 
     await send_update(proj, f"Extracted {len(all_docs)} chunks")
 
     # =========================================================
-    # 🔥 EMBEDDINGS
+    # EMBEDDINGS
     # =========================================================
     await send_update(proj, "Generating embeddings")
 
@@ -193,7 +223,7 @@ async def process_project_with_progress(base_path, proj, workers, logger, store,
 
 
 # =========================================================
-# 🔥 CLI
+# CLI
 # =========================================================
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
