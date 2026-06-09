@@ -40,6 +40,7 @@ def log_step(logger, msg):
 # 🔥 DOWNLOAD + PROCESS PDF
 # =========================================================
 def process_url_temp(doc, pid, pipeline):
+
     tmp_path = None
 
     try:
@@ -47,6 +48,7 @@ def process_url_temp(doc, pid, pipeline):
         filename = doc["documentName"]
 
         if "goldstandard" in url:
+
             headers = {
                 "accept": "*/*",
                 "accept-language": "en-US,en;q=0.9",
@@ -54,10 +56,15 @@ def process_url_temp(doc, pid, pipeline):
                 "user-agent": "Mozilla/5.0",
                 "x-gold-standard-api-version": "2023-04-19"
             }
+
         else:
             headers = {}
 
-        res = requests.get(url, headers=headers, timeout=60)
+        res = requests.get(
+            url,
+            headers=headers,
+            timeout=60
+        )
 
         if res.status_code == 403:
             print(f"[{pid}] ⚠️ Skipping restricted document: {filename}")
@@ -75,9 +82,12 @@ def process_url_temp(doc, pid, pipeline):
 
         time.sleep(0.05)
 
-        document = pipeline.ingest(pid=pid, filename=tmp_path)
+        document = pipeline.ingest(
+            pid=pid,
+            filename=tmp_path
+        )
 
-        return [
+        chunks = [
             {
                 "id": f"{pid}_{filename}_{i}",
                 "pid": pid,
@@ -89,14 +99,20 @@ def process_url_temp(doc, pid, pipeline):
             for i, page in enumerate(document.pages)
         ]
 
+        return chunks
+
     except Exception as e:
+
         print(f"[{pid}] ❌ Temp processing failed: {e}")
         return []
 
     finally:
+
         if tmp_path and os.path.exists(tmp_path):
+
             try:
                 os.remove(tmp_path)
+
             except:
                 pass
 
@@ -104,136 +120,280 @@ def process_url_temp(doc, pid, pipeline):
 # =========================================================
 # 🔥 MAIN PIPELINE
 # =========================================================
-async def process_project_with_progress(base_path, proj, workers, logger, store, send_update):
+async def process_project_with_progress(
+    base_path,
+    proj,
+    workers,
+    logger,
+    store,
+    send_update
+):
 
     log_step(logger, f"[{proj}] 🚀 START")
 
-    pipeline = IngestionPipeline(pdf_base_path=tempfile.gettempdir())
+    pipeline = IngestionPipeline(
+        pdf_base_path=tempfile.gettempdir()
+    )
 
-    # =========================================================
-    # FETCH
-    # =========================================================
-    await send_update(proj, "Fetching metadata")
+    # =====================================================
+    # FETCH METADATA
+    # =====================================================
+    await send_update(proj, {
+        "type": "pipeline_step",
+        "stage": "metadata_fetch",
+        "message": "Fetching registry metadata",
+        "status": "running",
+        "progress": 25
+    })
 
     if proj.startswith("VCS"):
-        metadata, selected = process_verra_project(proj, logger)
+
+        metadata, selected = process_verra_project(
+            proj,
+            logger
+        )
+
         source = "verra"
 
     elif proj.startswith("GS"):
-        metadata, selected = process_gs_project(proj, logger, send_update)
+
+        metadata, selected = process_gs_project(
+            proj,
+            logger,
+            send_update
+        )
+
         source = "gs"
 
     else:
         raise ValueError(f"Unknown project type: {proj}")
 
-    await send_update(proj, "Metadata fetched")
+    # =====================================================
+    # METADATA DONE
+    # =====================================================
+    await send_update(proj, {
+        "type": "pipeline_step",
+        "stage": "metadata_loaded",
+        "message": "Project metadata loaded",
+        "status": "completed",
+        "progress": 30
+    })
 
-    # =========================================================
-    # 🔥 SAVE METADATA (FIXED)
-    # =========================================================
+    # =====================================================
+    # SAVE METADATA
+    # =====================================================
     if metadata:
+
         MAX_RETRIES = 3
 
         for attempt in range(MAX_RETRIES):
+
             db = SessionLocal()
+
             try:
+
                 if source == "verra":
+
                     from RDS.crud_metadata import upsert_metadata
+
                     upsert_metadata(db, metadata)
 
                 elif source == "gs":
+
                     from RDS.crud_metadata_gs import upsert_metadata_gs
+
                     upsert_metadata_gs(db, metadata)
 
                 db.commit()
                 break
 
             except OperationalError as e:
+
                 print(f"[{proj}] ⚠️ DB error (metadata) attempt {attempt+1}: {e}")
+
                 db.rollback()
 
                 if attempt == MAX_RETRIES - 1:
-                    print(f"[{proj}] ❌ CRITICAL: DB unreachable. Stopping.")
-                    sys.exit(1)
+
+                    raise RuntimeError(
+                        f"[{proj}] Failed saving metadata"
+                    )
 
                 time.sleep(3)
 
             finally:
                 db.close()
 
-    # =========================================================
-    # 🔥 SAVE DOCUMENTS (FIXED)
-    # =========================================================
-    await send_update(proj, "Saving selected documents")
+    # =====================================================
+    # SAVE DOCUMENTS
+    # =====================================================
+    await send_update(proj, {
+        "type": "pipeline_step",
+        "stage": "document_selection",
+        "message": "Selecting relevant project documents",
+        "status": "running",
+        "progress": 35
+    })
 
     MAX_RETRIES = 3
 
     for attempt in range(MAX_RETRIES):
+
         db = SessionLocal()
+
         try:
-            replace_project_documents(db, proj, selected)
+
+            replace_project_documents(
+                db,
+                proj,
+                selected
+            )
+
             db.commit()
             break
 
         except OperationalError as e:
+
             print(f"[{proj}] ⚠️ DB error (docs) attempt {attempt+1}: {e}")
+
             db.rollback()
 
             if attempt == MAX_RETRIES - 1:
-                print(f"[{proj}] ❌ CRITICAL: Failed saving documents. Stopping.")
-                sys.exit(1)
+
+                raise RuntimeError(
+                    f"[{proj}] Failed saving selected documents"
+                )
 
             time.sleep(3)
 
         finally:
             db.close()
 
-    # =========================================================
+    # =====================================================
+    # SEND DOCUMENT LIST
+    # =====================================================
+    await send_update(proj, {
+        "type": "documents_selected",
+        "documents": [
+            {
+                "name": d.get("documentName", "Unknown"),
+                "url": d.get("uri", ""),
+            }
+            for d in selected
+        ]
+    })
+
+    # =====================================================
     # PROCESS PDFs
-    # =========================================================
-    await send_update(proj, f"Processing {len(selected)} PDFs")
+    # =====================================================
+    await send_update(proj, {
+        "type": "pipeline_step",
+        "stage": "pdf_processing",
+        "message": f"Processing {len(selected)} PDF documents",
+        "status": "running",
+        "progress": 45
+    })
 
     all_docs = []
+
     loop = asyncio.get_event_loop()
 
     with ThreadPoolExecutor(max_workers=workers) as executor:
+
         tasks = [
-            loop.run_in_executor(executor, process_url_temp, d, proj, pipeline)
+            loop.run_in_executor(
+                executor,
+                process_url_temp,
+                d,
+                proj,
+                pipeline
+            )
             for d in selected
         ]
 
         for i, future in enumerate(asyncio.as_completed(tasks), 1):
+
             result = await future
+
             all_docs.extend(result)
-            await send_update(proj, f"Processed {i}/{len(selected)} PDFs")
 
-    await send_update(proj, f"Extracted {len(all_docs)} chunks")
+            processed_doc = selected[i - 1]
 
-    # =========================================================
+            await send_update(proj, {
+                "type": "pdf_progress",
+                "current": i,
+                "total": len(selected),
+                "document": processed_doc.get("documentName"),
+                "message": f"Processed PDF {i}/{len(selected)}",
+                "status": "running",
+                "progress": 45 + int((i / max(len(selected), 1)) * 15)
+            })
+    # =====================================================
+    # CHUNK STATS
+    # =====================================================
+    await send_update(proj, {
+        "type": "chunks_created",
+        "chunks": len(all_docs),
+        "message": f"Extracted {len(all_docs)} semantic chunks",
+        "status": "completed",
+        "progress": 60
+    })
+
+    # =====================================================
     # EMBEDDINGS
-    # =========================================================
-    await send_update(proj, "Generating embeddings")
+    # =====================================================
+    await send_update(proj, {
+        "type": "pipeline_step",
+        "stage": "embedding_generation",
+        "message": "Generating semantic embeddings",
+        "status": "running",
+        "progress": 65
+    })
 
     if all_docs:
+
         store.insert_documents(all_docs)
 
-    await send_update(proj, "Stored in vector database")
+    # =====================================================
+    # VECTOR DB COMPLETE
+    # =====================================================
+    await send_update(proj, {
+        "type": "pipeline_step",
+        "stage": "vector_storage",
+        "message": "Stored embeddings in vector database",
+        "status": "completed",
+        "progress": 70
+    })
 
     log_step(logger, f"[{proj}] ✅ DONE")
 
 
 # =========================================================
-# CLI
+# 🔥 CLI
 # =========================================================
 if __name__ == "__main__":
+
     parser = argparse.ArgumentParser()
-    parser.add_argument("--project", required=True)
-    parser.add_argument("--workers", type=int, default=2)
+
+    parser.add_argument(
+        "--project",
+        required=True
+    )
+
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=2
+    )
 
     args = parser.parse_args()
 
     logger = setup_logger("ingestion")
-    embedding = EmbeddingFactory.create("nomic", batch_size=32)
+
+    embedding = EmbeddingFactory.create(
+        "nomic",
+        batch_size=32
+    )
 
     store = VectorStore(embedding)
 
@@ -243,8 +403,8 @@ if __name__ == "__main__":
         collection="nomic"
     )
 
-    async def send_update(pid, msg):
-        print(f"[{pid}] {msg}")
+    async def send_update(pid, payload):
+        print(f"[{pid}] {payload}")
 
     asyncio.run(
         process_project_with_progress(

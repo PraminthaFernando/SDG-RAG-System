@@ -14,15 +14,19 @@ from scoring.modules.normalize_projects import normalize as normalize_text
 
 from RDS.fetch_type import get_project_sector
 
-# 🔥 NEW IMPORTS
+# 🔥 DB
 from sqlalchemy.exc import OperationalError
 from sqlalchemy import text
 
 
 # =========================================================
-# NORMALIZATION
+# 🔥 NORMALIZATION
 # =========================================================
-def normalize_single_project(llm_data, master, sector="forestry"):
+def normalize_single_project(
+    llm_data,
+    master,
+    sector="forestry"
+):
 
     result = {}
 
@@ -30,6 +34,7 @@ def normalize_single_project(llm_data, master, sector="forestry"):
 
         try:
             sdg_id, sdg_name = sdg_text.split(".", 1)
+
         except:
             continue
 
@@ -49,33 +54,43 @@ def normalize_single_project(llm_data, master, sector="forestry"):
                 continue
 
             target_id = target_text.split(" ")[0]
+
             matched_id = None
 
             for s, s_data in master["sectors"].items():
+
                 if s != sector:
                     continue
 
                 for sdg_k, sdg_data in s_data["sdgs"].items():
+
                     if sdg_k != sdg_id:
                         continue
 
                     for t_k, t_data in sdg_data["targets"].items():
+
                         if t_k != target_id:
                             continue
 
                         for ind_id, ind in t_data["indicators"].items():
-                            if normalize_text(indicator_text) == normalize_text(ind["indicator_text"]):
+
+                            if normalize_text(indicator_text) == normalize_text(
+                                ind["indicator_text"]
+                            ):
                                 matched_id = ind_id
                                 break
 
             if not matched_id:
                 continue
 
-            target_obj = result[sdg_id]["targets"].setdefault(target_id, {
-                "target_id": target_id,
-                "target_text": target_text,
-                "indicators": {}
-            })
+            target_obj = result[sdg_id]["targets"].setdefault(
+                target_id,
+                {
+                    "target_id": target_id,
+                    "target_text": target_text,
+                    "indicators": {}
+                }
+            )
 
             target_obj["indicators"][matched_id] = {
                 "indicator_id": matched_id,
@@ -86,9 +101,15 @@ def normalize_single_project(llm_data, master, sector="forestry"):
 
 
 # =========================================================
-# LLM PIPELINE
+# 🔥 LLM PIPELINE
 # =========================================================
-def run_pipeline(pid, retrieval_service, retriev_policy_service, sector, progress_callback=None):
+def run_pipeline(
+    pid,
+    retrieval_service,
+    retriev_policy_service,
+    sector,
+    progress_callback=None
+):
 
     client = GroqLLMClient()
 
@@ -101,14 +122,20 @@ def run_pipeline(pid, retrieval_service, retriev_policy_service, sector, progres
     mappings = SDG_TARGETS_V2["sectors"][sector]["indicator_mappings"]
 
     final_output = {}
+
     total = len(mappings)
 
     for i, target in enumerate(mappings, start=1):
 
         if progress_callback:
-            progress_callback(i, total, target["Indicator"])
+            progress_callback(
+                i,
+                total,
+                target["Indicator"]
+            )
 
         sdg_goal = target["SDG"]
+
         final_output.setdefault(sdg_goal, [])
 
         description = f"""
@@ -121,13 +148,20 @@ Data Unit: {target['Data Unit']}
 """
 
         try:
-            final_answer = pipeline.run(description, pid, description)
+
+            final_answer = pipeline.run(
+                description,
+                pid,
+                description
+            )
+
         except Exception as e:
+
             print(f"[{pid}] ❌ LLM failed: {e}")
             continue
 
         final_answer["target"] = target["SDG_Target"]
-        final_answer["indicator"] = target['Indicator']
+        final_answer["indicator"] = target["Indicator"]
 
         final_output[sdg_goal].append(final_answer)
 
@@ -135,14 +169,30 @@ Data Unit: {target['Data Unit']}
 
 
 # =========================================================
-# MAIN PIPELINE
+# 🔥 MAIN PIPELINE
 # =========================================================
-async def run_agent_with_progress(project_id, embedding, send_update):
+async def run_agent_with_progress(
+    project_id,
+    embedding,
+    send_update
+):
 
     logger = setup_logger("SDG Agent")
 
-    await send_update(project_id, "Starting SDG analysis")
+    # =====================================================
+    # START
+    # =====================================================
+    await send_update(project_id, {
+        "type": "pipeline_step",
+        "stage": "sdg_initialization",
+        "message": "Initializing SDG intelligence engine",
+        "status": "running",
+        "progress": 72
+    })
 
+    # =====================================================
+    # RETRIEVAL SERVICES
+    # =====================================================
     retrieval_service = RetrievalService(
         mode="hybrid",
         use_reranker=True,
@@ -157,42 +207,105 @@ async def run_agent_with_progress(project_id, embedding, send_update):
         collection="policy_docs"
     )
 
+    # =====================================================
+    # DETECT SECTOR
+    # =====================================================
     from RDS.database import SessionLocal
 
     db = SessionLocal()
+
     try:
-        sector_info = get_project_sector(db, project_id)
-        sector = sector_info.get("sector", "renewables")
+
+        sector_info = get_project_sector(
+            db,
+            project_id
+        )
+
+        sector = sector_info.get(
+            "sector",
+            "renewables"
+        )
+
     finally:
         db.close()
 
-    await send_update(project_id, f"Detected sector: {sector}")
+    await send_update(project_id, {
+        "type": "pipeline_step",
+        "stage": "sector_detection",
+        "message": f"Detected project sector: {sector}",
+        "status": "completed",
+        "progress": 75
+    })
+
+    # =====================================================
+    # BUILD MASTER
+    # =====================================================
+    await send_update(project_id, {
+        "type": "pipeline_step",
+        "stage": "criteria_loading",
+        "message": "Loading SDG master criteria",
+        "status": "running",
+        "progress": 77
+    })
 
     rebuild_master_criteria(
         input_file_name="sdg_master_criteria.json",
         output_file_name="sector_master_criteria.json"
     )
 
-    master_path = Path("scoring/criteria/sector_master_criteria.json")
+    master_path = Path(
+        "scoring/criteria/sector_master_criteria.json"
+    )
 
     with open(master_path, "r", encoding="utf-8") as f:
         master = json.load(f)
 
-    await send_update(project_id, "Running SDG analysis")
+    # =====================================================
+    # START ANALYSIS
+    # =====================================================
+    await send_update(project_id, {
+        "type": "pipeline_step",
+        "stage": "sdg_analysis",
+        "message": "Running SDG evidence analysis",
+        "status": "running",
+        "progress": 80
+    })
 
     loop = asyncio.get_event_loop()
 
-    def progress_callback(i, total, indicator_name):
-        msg = f"Evaluating {i}/{total}: {indicator_name[:60]}"
+    # =====================================================
+    # INDICATOR PROGRESS
+    # =====================================================
+    def progress_callback(
+        i,
+        total,
+        indicator_name
+    ):
+
         asyncio.run_coroutine_threadsafe(
-            send_update(project_id, msg),
+
+            send_update(project_id, {
+                "type": "indicator_progress",
+                "current": i,
+                "total": total,
+                "indicator": indicator_name,
+                "message": f"Evaluating indicator {i}/{total}",
+                "status": "running",
+                "progress": 80 + int((i / max(total, 1)) * 10)
+            }),
+
             loop
         )
 
-    # ================= LLM =================
+    # =====================================================
+    # RUN LLM
+    # =====================================================
     try:
+
         results = await loop.run_in_executor(
+
             None,
+
             lambda: run_pipeline(
                 pid=project_id,
                 retrieval_service=retrieval_service,
@@ -201,35 +314,68 @@ async def run_agent_with_progress(project_id, embedding, send_update):
                 progress_callback=progress_callback
             )
         )
+
     except Exception as e:
-        await send_update(project_id, f"❌ LLM execution failed: {str(e)}", "failed")
+
+        await send_update(project_id, {
+            "type": "pipeline_error",
+            "stage": "llm_execution",
+            "message": f"LLM execution failed: {str(e)}",
+            "status": "failed"
+        })
+
         return
 
     if not results:
-        raise RuntimeError(f"[{project_id}] ❌ No LLM results generated")
 
-    # ================= SAVE LLM =================
-    await send_update(project_id, "Saving LLM results (S3 upload)")
+        raise RuntimeError(
+            f"[{project_id}] ❌ No LLM results generated"
+        )
+
+    # =====================================================
+    # SAVE LLM
+    # =====================================================
+    await send_update(project_id, {
+        "type": "pipeline_step",
+        "stage": "llm_storage",
+        "message": "Saving LLM analysis results",
+        "status": "running",
+        "progress": 91
+    })
 
     from RDS.crud_llm import upsert_llm_result
 
     success = False
 
     for attempt in range(3):
+
         db = SessionLocal()
+
         try:
+
             db.execute(text("SELECT 1"))
-            upsert_llm_result(db, project_id, results)
+
+            upsert_llm_result(
+                db,
+                project_id,
+                results
+            )
+
             db.commit()
+
             success = True
             break
 
         except OperationalError as e:
+
             print(f"[{project_id}] ⚠️ retry {attempt+1}: {e}")
+
             db.rollback()
 
         except Exception as e:
+
             print(f"[{project_id}] ❌ DB write failed: {e}")
+
             db.rollback()
             break
 
@@ -237,21 +383,47 @@ async def run_agent_with_progress(project_id, embedding, send_update):
             db.close()
 
     if not success:
-        raise RuntimeError(f"[{project_id}] ❌ CRITICAL: Failed to store LLM results")
 
-    await send_update(project_id, "LLM processing completed")
+        raise RuntimeError(
+            f"[{project_id}] ❌ Failed storing LLM results"
+        )
 
-    # ================= NORMALIZE =================
-    structured = normalize_single_project(results, master, sector=sector)
+    await send_update(project_id, {
+        "type": "pipeline_step",
+        "stage": "llm_complete",
+        "message": "LLM analysis completed",
+        "status": "completed",
+        "progress": 93
+    })
+
+    # =====================================================
+    # NORMALIZE
+    # =====================================================
+    structured = normalize_single_project(
+        results,
+        master,
+        sector=sector
+    )
+
     del results
 
-    # ================= SCORING =================
-    await send_update(project_id, "Calculating final score")
+    # =====================================================
+    # SCORING
+    # =====================================================
+    await send_update(project_id, {
+        "type": "pipeline_step",
+        "stage": "score_calculation",
+        "message": "Calculating sustainability intelligence score",
+        "status": "running",
+        "progress": 95
+    })
 
     project_data = structured
+
     master_sdgs = master["sectors"][sector]["sdgs"]
 
     sdg_scores = []
+
     output_sdgs = {}
 
     for sdg_id, sdg_data in master_sdgs.items():
@@ -261,6 +433,7 @@ async def run_agent_with_progress(project_id, embedding, send_update):
         for target_id, target_data in sdg_data["targets"].items():
 
             indicators = target_data["indicators"]
+
             total = len(indicators)
 
             if total == 0:
@@ -269,6 +442,7 @@ async def run_agent_with_progress(project_id, embedding, send_update):
             score_sum = 0
 
             for ind_id in indicators.keys():
+
                 val = (
                     project_data.get("sdgs", {})
                     .get(sdg_id, {})
@@ -281,41 +455,76 @@ async def run_agent_with_progress(project_id, embedding, send_update):
 
                 score_sum += min(val, 2)
 
-            target_scores.append(score_sum / (2 * total))
+            target_scores.append(
+                score_sum / (2 * total)
+            )
 
-        sdg_score = sum(target_scores) / len(target_scores) if target_scores else 0
+        sdg_score = (
+            sum(target_scores) / len(target_scores)
+            if target_scores
+            else 0
+        )
 
-        output_sdgs[sdg_id] = {"score": sdg_score}
+        output_sdgs[sdg_id] = {
+            "score": sdg_score
+        }
+
         sdg_scores.append(sdg_score)
 
     final_output = {
         "sector": sector,
-        "final_score": sum(sdg_scores) / len(sdg_scores) if sdg_scores else 0,
+        "final_score": (
+            sum(sdg_scores) / len(sdg_scores)
+            if sdg_scores
+            else 0
+        ),
         "sdgs": output_sdgs
     }
 
-    # ================= SAVE SCORE =================
-    await send_update(project_id, "Saving score to database")
+    # =====================================================
+    # SAVE SCORE
+    # =====================================================
+    await send_update(project_id, {
+        "type": "pipeline_step",
+        "stage": "score_storage",
+        "message": "Saving final sustainability score",
+        "status": "running",
+        "progress": 97
+    })
 
     from RDS.crud_score import upsert_full_score
 
     success = False
 
     for attempt in range(3):
+
         db = SessionLocal()
+
         try:
+
             db.execute(text("SELECT 1"))
-            upsert_full_score(db, project_id, final_output)
+
+            upsert_full_score(
+                db,
+                project_id,
+                final_output
+            )
+
             db.commit()
+
             success = True
             break
 
         except OperationalError as e:
+
             print(f"[{project_id}] ⚠️ retry {attempt+1}: {e}")
+
             db.rollback()
 
         except Exception as e:
+
             print(f"[{project_id}] ❌ Score write failed: {e}")
+
             db.rollback()
             break
 
@@ -323,25 +532,47 @@ async def run_agent_with_progress(project_id, embedding, send_update):
             db.close()
 
     if not success:
-        raise RuntimeError(f"[{project_id}] ❌ CRITICAL: Failed to store score")
 
-    await send_update(project_id, "Final score saved")
-    await send_update(project_id, "SDG analysis completed", "done")
+        raise RuntimeError(
+            f"[{project_id}] ❌ Failed storing score"
+        )
+
+    # =====================================================
+    # FINAL SCORE EVENT
+    # =====================================================
+    await send_update(project_id, {
+        "type": "final_score",
+        "score": final_output["final_score"],
+        "sector": sector,
+        "status": "done",
+        "progress": 100,
+        "message": "AI sustainability analysis completed"
+    })
 
 
 # =========================================================
-# CLI
+# 🔥 CLI
 # =========================================================
 def main():
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--project", type=str, required=True)
-    parser.add_argument("--embedding", type=str, default="e5")
+
+    parser.add_argument(
+        "--project",
+        type=str,
+        required=True
+    )
+
+    parser.add_argument(
+        "--embedding",
+        type=str,
+        default="e5"
+    )
 
     args = parser.parse_args()
 
-    async def console_update(pid, msg, status="running"):
-        print(f"[{pid}] {msg}")
+    async def console_update(pid, payload):
+        print(f"[{pid}] {payload}")
 
     asyncio.run(
         run_agent_with_progress(

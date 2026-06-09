@@ -10,7 +10,27 @@ import os
 from RDS.database import SessionLocal
 from RDS.crud_metadata import get_metadata
 from RDS.crud_score import get_project_score as get_score_from_db
-from RDS.crud_insights import get_forestry_score_distribution, get_forestry_sdg_distribution,get_forestry_summary,get_forestry_sdg_avg,get_forestry_top_projects,get_forestry_emission_vs_score,get_forestry_category_performance
+from RDS.crud_insights import (
+    get_forestry_score_distribution,
+    get_forestry_sdg_distribution,
+    get_forestry_summary,
+    get_forestry_sdg_avg,
+    get_forestry_top_projects,
+    get_forestry_emission_vs_score,
+    get_forestry_category_performance,
+
+    get_renewable_score_distribution,
+    get_renewable_sdg_distribution,
+    get_renewable_summary,
+    get_renewable_sdg_avg,
+    get_renewable_top_projects,
+    get_renewable_emission_vs_score,
+    get_renewable_category_performance,
+    get_renewable_map_data,
+
+    get_forestry_map_data
+)
+
 from fastapi import Depends
 from sqlalchemy.orm import Session
 from RDS.database import get_db
@@ -54,27 +74,18 @@ def root():
 def detect_source(project_id: str):
     if project_id.startswith("VCS_"):
         return "verra"
+
     if project_id.startswith("GS_"):
         return "gs"
+
     return None
+
 # =========================================================
 # 🔥 RENEWABLE SUMMARY
 # =========================================================
-from RDS.crud_insights import (
-    get_renewable_score_distribution,
-    get_renewable_sdg_distribution,
-    get_renewable_summary,
-    get_renewable_sdg_avg,
-    get_renewable_top_projects,
-    get_renewable_emission_vs_score,
-    get_renewable_category_performance,
-    get_renewable_map_data
-)
-
 @app.get("/insights/renewable/summary")
 def renewable_summary(db: Session = Depends(get_db)):
     return get_renewable_summary(db)
-
 
 # =========================================================
 # 🔥 RENEWABLE SCORE DISTRIBUTION
@@ -88,7 +99,6 @@ def renewable_score_distribution(db: Session = Depends(get_db)):
         "distribution": data
     }
 
-
 # =========================================================
 # 🔥 RENEWABLE SDG DISTRIBUTION
 # =========================================================
@@ -101,14 +111,12 @@ def renewable_sdg_distribution(db: Session = Depends(get_db)):
         "distribution": data
     }
 
-
 # =========================================================
-# 🔥 RENEWABLE SDG AVERAGE
+# 🔥 RENEWABLE SDG AVG
 # =========================================================
 @app.get("/insights/renewable/sdg-average")
 def renewable_sdg_avg(db: Session = Depends(get_db)):
     return get_renewable_sdg_avg(db)
-
 
 # =========================================================
 # 🔥 RENEWABLE TOP PROJECTS
@@ -117,14 +125,12 @@ def renewable_sdg_avg(db: Session = Depends(get_db)):
 def renewable_top_projects(db: Session = Depends(get_db)):
     return get_renewable_top_projects(db)
 
-
 # =========================================================
 # 🔥 RENEWABLE EMISSION VS SCORE
 # =========================================================
 @app.get("/insights/renewable/emission-vs-score")
 def renewable_emission_vs_score(db: Session = Depends(get_db)):
     return get_renewable_emission_vs_score(db)
-
 
 # =========================================================
 # 🔥 RENEWABLE CATEGORY PERFORMANCE
@@ -133,19 +139,21 @@ def renewable_emission_vs_score(db: Session = Depends(get_db)):
 def renewable_category_performance(db: Session = Depends(get_db)):
     return get_renewable_category_performance(db)
 
-
 # =========================================================
 # 🔥 RENEWABLE MAP
 # =========================================================
 @app.get("/insights/renewable/map")
 def renewable_map(db: Session = Depends(get_db)):
     return get_renewable_map_data(db)
+
 # =========================================================
 # 🔥 METADATA
 # =========================================================
 @app.get("/project/{project_id}")
 def get_project_metadata(project_id: str):
+
     db = SessionLocal()
+
     try:
         source = detect_source(project_id)
 
@@ -171,57 +179,61 @@ def get_project_metadata(project_id: str):
         db.close()
 
 # =========================================================
-# 🔥 SUMMARY
+# 🔥 FORESTRY SUMMARY
 # =========================================================
 @app.get("/insights/forestry/summary")
 def forestry_summary(db: Session = Depends(get_db)):
     return get_forestry_summary(db)
 
-from RDS.crud_insights import get_forestry_map_data
-
+# =========================================================
+# 🔥 FORESTRY MAP
+# =========================================================
 @app.get("/insights/forestry/map")
 def forestry_map():
+
     db = SessionLocal()
+
     try:
         data = get_forestry_map_data(db)
         return data
+
     finally:
         db.close()
+
 # =========================================================
-# 🔥 SDG AVG
+# 🔥 FORESTRY SDG AVG
 # =========================================================
 @app.get("/insights/forestry/sdg-average")
 def forestry_sdg_avg(db: Session = Depends(get_db)):
     return get_forestry_sdg_avg(db)
 
-
 # =========================================================
-# 🔥 TOP PROJECTS
+# 🔥 FORESTRY TOP PROJECTS
 # =========================================================
 @app.get("/insights/forestry/top-projects")
 def forestry_top_projects(db: Session = Depends(get_db)):
     return get_forestry_top_projects(db)
 
-
 # =========================================================
-# 🔥 EMISSION VS SCORE
+# 🔥 FORESTRY EMISSION VS SCORE
 # =========================================================
 @app.get("/insights/forestry/emission-vs-score")
 def forestry_emission_vs_score(db: Session = Depends(get_db)):
     return get_forestry_emission_vs_score(db)
 
-
 # =========================================================
-# 🔥 CATEGORY PERFORMANCE
+# 🔥 FORESTRY CATEGORY PERFORMANCE
 # =========================================================
 @app.get("/insights/forestry/category-performance")
 def forestry_category_performance(db: Session = Depends(get_db)):
     return get_forestry_category_performance(db)
+
 # =========================================================
-# 🔥 FORESTRY INSIGHTS - SCORE DISTRIBUTION
+# 🔥 FORESTRY SCORE DISTRIBUTION
 # =========================================================
 @app.get("/insights/forestry/score-distribution")
 def forestry_score_distribution(db: Session = Depends(get_db)):
+
     data = get_forestry_score_distribution(db)
 
     return {
@@ -230,10 +242,11 @@ def forestry_score_distribution(db: Session = Depends(get_db)):
     }
 
 # =========================================================
-# 🔥 FORESTRY SDG DISTRIBUTION (PIE)
+# 🔥 FORESTRY SDG DISTRIBUTION
 # =========================================================
 @app.get("/insights/forestry/sdg-distribution")
 def forestry_sdg_distribution(db: Session = Depends(get_db)):
+
     data = get_forestry_sdg_distribution(db)
 
     return {
@@ -248,6 +261,7 @@ def forestry_sdg_distribution(db: Session = Depends(get_db)):
 def get_llm_signed_url(project_id: str):
 
     db = SessionLocal()
+
     try:
         result = db.execute(text("""
             SELECT s3_path
@@ -275,11 +289,13 @@ def get_llm_signed_url(project_id: str):
         db.close()
 
 # =========================================================
-# 🔥 SCORE (SINGLE PROJECT)
+# 🔥 PROJECT SCORE
 # =========================================================
 @app.get("/project/{project_id}/score")
 def get_project_score(project_id: str):
+
     db = SessionLocal()
+
     try:
         result = get_score_from_db(db, project_id)
 
@@ -292,11 +308,13 @@ def get_project_score(project_id: str):
         db.close()
 
 # =========================================================
-# 🔥 LIST VERRA PROJECTS (WITH SCORE)
+# 🔥 LIST VERRA PROJECTS
 # =========================================================
 @app.get("/projects/verra")
 def list_verra_projects():
+
     db = SessionLocal()
+
     try:
         result = db.execute(text("""
             SELECT 
@@ -310,6 +328,7 @@ def list_verra_projects():
                 ps.final_score
 
             FROM verra_metadata vm
+
             LEFT JOIN project_scores ps
                 ON vm.project_id = ps.project_id
 
@@ -325,7 +344,6 @@ def list_verra_projects():
                 "status": r["project_status"],
                 "category": r["project_category"],
                 "credits": r["annual_emission_reduction"],
-
                 "sector": r["sector"],
                 "score": r["final_score"]
             }
@@ -336,11 +354,13 @@ def list_verra_projects():
         db.close()
 
 # =========================================================
-# 🔥 LIST GS PROJECTS (WITH SCORE)
+# 🔥 LIST GS PROJECTS
 # =========================================================
 @app.get("/projects/gs")
 def list_gs_projects():
+
     db = SessionLocal()
+
     try:
         result = db.execute(text("""
             SELECT 
@@ -354,6 +374,7 @@ def list_gs_projects():
                 ps.final_score
 
             FROM gs_metadata gm
+
             LEFT JOIN project_scores ps
                 ON gm.project_id = ps.project_id
 
@@ -369,7 +390,6 @@ def list_gs_projects():
                 "status": r["project_status"],
                 "category": r["project_type"],
                 "credits": r["annual_credits"],
-
                 "sector": r["sector"],
                 "score": r["final_score"]
             }
@@ -380,22 +400,25 @@ def list_gs_projects():
         db.close()
 
 # =========================================================
-# 🔥 WEBSOCKET MANAGER
+# 🔥 WEBSOCKET CONNECTIONS
 # =========================================================
 connections = {}
 
-async def send_update(project_id: str, step: str, status: str = "running"):
+# =========================================================
+# 🔥 WEBSOCKET EVENT SENDER
+# =========================================================
+async def send_update(project_id: str, payload: dict):
+
     if project_id not in connections:
         return
 
     dead = []
 
     for ws in connections[project_id]:
+
         try:
-            await ws.send_json({
-                "step": step,
-                "status": status
-            })
+            await ws.send_json(payload)
+
         except:
             dead.append(ws)
 
@@ -407,14 +430,19 @@ async def send_update(project_id: str, step: str, status: str = "running"):
 # =========================================================
 @app.websocket("/ws/{project_id}")
 async def websocket_endpoint(websocket: WebSocket, project_id: str):
+
     await websocket.accept()
+
     connections.setdefault(project_id, []).append(websocket)
 
     try:
         while True:
             await websocket.receive_text()
+
     except WebSocketDisconnect:
-        connections[project_id].remove(websocket)
+
+        if project_id in connections:
+            connections[project_id].remove(websocket)
 
 # =========================================================
 # 🔥 START PIPELINE
@@ -423,6 +451,7 @@ async def websocket_endpoint(websocket: WebSocket, project_id: str):
 async def start_ingestion(project_id: str, background_tasks: BackgroundTasks):
 
     async def run_pipeline():
+
         try:
             from scripts.ingest_project import process_project_with_progress
             from embeddings.embedding_factory import EmbeddingFactory
@@ -431,16 +460,62 @@ async def start_ingestion(project_id: str, background_tasks: BackgroundTasks):
 
             logger = setup_logger("API-Ingest")
 
-            await send_update(project_id, "🚀 Initializing system")
+            # =================================================
+            # INITIALIZING
+            # =================================================
+            await send_update(project_id, {
+                "type": "pipeline_step",
+                "stage": "initialization",
+                "message": "Initializing AI evaluation pipeline",
+                "status": "running",
+                "progress": 5
+            })
 
-            await send_update(project_id, "Loading embedding model")
-            embedding_model = EmbeddingFactory.create("nomic", batch_size=32)
+            # =================================================
+            # EMBEDDINGS
+            # =================================================
+            await send_update(project_id, {
+                "type": "pipeline_step",
+                "stage": "embedding_model",
+                "message": "Loading embedding model",
+                "status": "running",
+                "progress": 10
+            })
 
-            await send_update(project_id, "Connecting to vector database")
+            embedding_model = EmbeddingFactory.create(
+                "nomic",
+                batch_size=32
+            )
+
+            # =================================================
+            # VECTOR DB
+            # =================================================
+            await send_update(project_id, {
+                "type": "pipeline_step",
+                "stage": "vector_database",
+                "message": "Connecting to vector database",
+                "status": "running",
+                "progress": 15
+            })
+
             store = VectorStore(embedding_model)
-            store.initialize(False, model="nomic", collection="nomic")
 
-            await send_update(project_id, "Starting ingestion pipeline")
+            store.initialize(
+                False,
+                model="nomic",
+                collection="nomic"
+            )
+
+            # =================================================
+            # INGESTION
+            # =================================================
+            await send_update(project_id, {
+                "type": "pipeline_step",
+                "stage": "ingestion",
+                "message": "Starting document ingestion pipeline",
+                "status": "running",
+                "progress": 20
+            })
 
             await process_project_with_progress(
                 base_path=Path("temp"),
@@ -451,9 +526,18 @@ async def start_ingestion(project_id: str, background_tasks: BackgroundTasks):
                 send_update=send_update
             )
 
+            # =================================================
+            # SDG ANALYSIS
+            # =================================================
             from scripts.run_agent import run_agent_with_progress
 
-            await send_update(project_id, "🚀 Starting SDG analysis")
+            await send_update(project_id, {
+                "type": "pipeline_step",
+                "stage": "sdg_analysis",
+                "message": "Starting SDG intelligence analysis",
+                "status": "running",
+                "progress": 70
+            })
 
             await run_agent_with_progress(
                 project_id=project_id,
@@ -461,13 +545,28 @@ async def start_ingestion(project_id: str, background_tasks: BackgroundTasks):
                 send_update=send_update
             )
 
-            await send_update(project_id, "🎉 Full pipeline completed", "done")
+            # =================================================
+            # COMPLETE
+            # =================================================
+            await send_update(project_id, {
+                "type": "pipeline_complete",
+                "stage": "completed",
+                "message": "Full AI sustainability analysis completed",
+                "status": "done",
+                "progress": 100
+            })
 
         except Exception as e:
-            await send_update(project_id, f"❌ Error: {str(e)}", "failed")
+
+            await send_update(project_id, {
+                "type": "pipeline_error",
+                "stage": "failed",
+                "message": f"Pipeline failed: {str(e)}",
+                "status": "failed"
+            })
 
     asyncio.create_task(run_pipeline())
 
-    return {"message": f"Pipeline started for {project_id}"}
-
-
+    return {
+        "message": f"Pipeline started for {project_id}"
+    }
