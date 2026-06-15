@@ -10,6 +10,7 @@ GET_FORESTRY_SCORE_DISTRIBUTION = text("""
     FROM project_scores
     WHERE sector = 'forestry'
       AND final_score IS NOT NULL
+      AND final_score > 0
     GROUP BY bin_start
     ORDER BY bin_start
 """)
@@ -130,6 +131,7 @@ GET_RENEWABLE_SCORE_DISTRIBUTION = text("""
     FROM project_scores
     WHERE sector = 'renewables'
       AND final_score IS NOT NULL
+      AND final_score > 0
     GROUP BY bin_start
     ORDER BY bin_start
 """)
